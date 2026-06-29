@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configurador SWARCO | NUESO</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23d71920'/%3E%3Cpath d='M17 42h30v6H17zM18 16h28v8H18zm0 13h28v8H18z' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.location.protocol !== "file:") return;
+        document.querySelector("#app").innerHTML = `
+          <section class="screen">
+            <div class="panel">
+              <div class="panel-header"><h2>Arranque del configurador</h2></div>
+              <div class="panel-body grid">
+                <div class="notice">
+                  El configurador no puede abrirse directamente con doble clic sobre index.html porque el navegador bloquea la lectura de las tablas locales.
+                </div>
+                <div class="empty">
+                  macOS: abra start_beta.command. Windows: abra start_windows.bat. Despues entre en http://127.0.0.1:4173/
+                </div>
+              </div>
+            </div>
+          </section>
+        `;
+      });
+    </script>
+    <script src="vendor/xlsx.full.min.js" defer></script>
+    <script type="module" src="js/app.js?v=11"></script>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <section class="screen">
+        <div class="panel">
+          <div class="panel-header"><h2>Cargando configurador</h2></div>
+          <div class="panel-body grid">
+            <div class="notice">Leyendo tablas locales. Puede tardar unos segundos la primera vez.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

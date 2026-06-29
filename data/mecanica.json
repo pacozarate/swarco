@@ -1,0 +1,4 @@
+[
+  { "model": "PN100", "technology": "TFT", "basePrice": 240, "pricePerMm2": 0.00018, "setup": 55, "version": "MEC-2026-01" },
+  { "model": "PN200", "technology": "LED", "basePrice": 320, "pricePerMm2": 0.00022, "setup": 75, "version": "MEC-2026-01" }
+]

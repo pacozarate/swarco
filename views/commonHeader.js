@@ -1,0 +1,29 @@
+import { ROLES } from "../js/authEngine.js";
+
+export function renderHeader(state, actions) {
+  return `
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark">S</div>
+        <div class="brand-copy">
+          <strong>Configurador SWARCO</strong>
+          <span>NUESO TECH / NUESO GROUP</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <label class="field" style="min-width:220px">
+          <span class="meta-text">Rol simulado</span>
+          <select id="roleSelect">
+            ${Object.entries(ROLES).map(([key, role]) => `<option value="${key}" ${state.role === key ? "selected" : ""}>${role.label}</option>`).join("")}
+          </select>
+        </label>
+        <button class="button ghost" id="exportTrace">Exportar trazabilidad</button>
+      </div>
+    </header>
+  `;
+}
+
+export function bindHeader(actions) {
+  document.querySelector("#roleSelect")?.addEventListener("change", (event) => actions.setRole(event.target.value));
+  document.querySelector("#exportTrace")?.addEventListener("click", actions.exportTrace);
+}

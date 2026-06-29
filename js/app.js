@@ -1,0 +1,618 @@
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=2";
+import { loadJson, readWorkbookFile } from "./importExcel.js";
+import { detectChange } from "./changeDetectionEngine.js";
+import { validateTables } from "./validators.js";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js";
+import { getTftDetails } from "./tftDataEngine.js";
+import { calculateLedPanel } from "./ledCalculationEngine.js";
+import { calculateMechanics } from "./mechanicsEngine.js";
+import { explodeBom } from "./bomExplosionEngine.js";
+import { consolidateBom } from "./bomConsolidationEngine.js";
+import { calculateCosts } from "./costingEngine.js";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js";
+import { downloadCsv, downloadJson } from "./exportResults.js";
+import { renderSidebar } from "./appRouter.js?v=2";
+import { bindHeader, renderHeader } from "../views/commonHeader.js";
+import { maintenanceView } from "../views/maintenanceView.js";
+import { modelSelectionView } from "../views/modelSelectionView.js";
+import { tftView } from "../views/tftView.js";
+import { ledView } from "../views/ledView.js";
+import { mechanicsView } from "../views/mechanicsView.js";
+import { bomView } from "../views/bomView.js";
+import { costingView } from "../views/costingView.js";
+import { formulasView } from "../views/formulasView.js";
+
+const app = document.querySelector("#app");
+
+app.innerHTML = `
+  <section class="screen">
+    <div class="panel">
+      <div class="panel-header"><h2>Cargando configurador</h2></div>
+      <div class="panel-body grid">
+        <div class="notice">Leyendo tablas locales. Puede tardar unos segundos la primera vez.</div>
+      </div>
+    </div>
+  </section>
+`;
+
+const state = {
+  route: "model",
+  role: "tecnico",
+  tables: {},
+  versions: {},
+  changes: {},
+  issues: [],
+  models: [],
+  selectedModel: "",
+  config: {
+    options: {},
+    tftCode: "",
+    ledModuleCode: "",
+    widthMm: 1280,
+    heightMm: 720,
+    consumptionFactor: 1,
+    ledColor: "",
+    ledCalcMode: "Automático",
+    ledManualResolution: "110x41",
+    ledPitch: "",
+    ledLines: 3,
+    ledCharsPerLine: 16,
+    ledCharacterFormat: "15x16",
+    ledLegibilityDistance: 50,
+    ledCharSpacing: 2,
+    ledLineSpacing: 10,
+    ledMatrices: 2,
+    ledMatrixSpacing: 30,
+    ledFaAdjustment: 0,
+    ledCurrentAdjustmentPercent: 100,
+    ledMechanicsMode: "Automático",
+    ledManualWidthMm: 1080,
+    ledManualHeightMm: 290,
+    ledMaterial: "ALU",
+    ledQuantity: 30,
+    ledPriceMode: "Precio Fijo",
+    ledMarginMode: "Sin Margen",
+    ledSetup: "SET UP",
+    tftSizeMode: "Pulgadas/inches",
+    tftAspectRatio: "",
+    tftBrightness: "",
+    tftResolution: "",
+    tftTempRange: "",
+    tftManufacturer: "",
+    tftMaterial: "GALVA",
+    tftQuantity: 30,
+    tftPriceMode: "Precio Fijo",
+    tftMarginMode: "Sin Margen",
+    tftSetup: "SET UP",
+    tftSelectionMode: "Selección",
+    tftManualPrice: 0,
+    tftSizeInches: "",
+    tftMechanicalWidthMm: 700,
+    tftMechanicalHeightMm: 420,
+    tftSheetThicknessMm: 2
+  },
+  bom: {
+    status: "BOM_NO_GENERADA",
+    version: "",
+    generatedAt: "",
+    generatedBy: "",
+    sourceVersions: {},
+    exploded: [],
+    consolidated: []
+  },
+  bomTab: "exploded",
+  costing: { rows: [], total: 0, missingPrices: 0 },
+  formulas: mergeFormulas(),
+  formulaEditorMessage: "",
+  costApproved: false
+};
+
+const tableKeys = ["alart", "alhis", "gcesp", "alartdv", "cplismat", "ct_tft", "ct_led", "mecanica", "dimensiones_base", "trl"];
+const storageKey = "swarco-configurator-state-v7";
+
+init().catch((error) => {
+  console.error("No se pudo iniciar el configurador", error);
+  renderStartupError(error);
+});
+
+async function init() {
+  const demoData = await Promise.all(tableKeys.map((key) => loadJson(`data/${key === "trl" ? "trl/pn-demo-trl" : key}.json`)));
+  tableKeys.forEach((key, index) => {
+    state.tables[key] = demoData[index];
+  });
+  restoreLocalState();
+  state.models = getModels(state.tables.trl);
+  if (!state.models.some((model) => model.model === state.selectedModel)) state.selectedModel = state.models[0]?.model || "";
+  if (!state.config.options || !Object.keys(state.config.options).length) resetConfigurationForModel();
+  render();
+}
+
+function renderStartupError(error) {
+  app.innerHTML = `
+    <section class="screen">
+      <div class="panel">
+        <div class="panel-header"><h2>No se pudo cargar el configurador</h2></div>
+        <div class="panel-body grid">
+          <div class="notice">Revise que ha abierto la aplicacion con start_beta.command y que la carpeta contiene data, js, views, css y vendor.</div>
+          <div class="empty"><strong>Detalle:</strong> ${escapeHtml(error?.message || error || "Error desconocido")}</div>
+          <div class="actions">
+            <button class="button primary" id="clearLocalState">Borrar datos locales y recargar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+  document.querySelector("#clearLocalState")?.addEventListener("click", () => {
+    localStorage.removeItem(storageKey);
+    window.location.reload();
+  });
+}
+
+function deriveViewState() {
+  const currentModel = state.models.find((model) => model.model === state.selectedModel) || state.models[0];
+  const modelRows = getModelTrl(state.tables.trl, currentModel?.model);
+  const groups = getOptionsByGroup(modelRows);
+  const optionGroups = Object.entries(groups)
+    .filter(([key]) => key && key !== "0" && (currentModel?.technology === "LED" || key !== "2L"))
+    .map(([key, rows]) => ({ key, label: groupLabel(key), rows }));
+  const tftDetails = getTftDetails(state.config.tftCode, state.tables);
+  const filteredTfts = filterTfts(state.tables.ct_tft, state.config);
+  const tftDimensions = getTftDimensions(state.config, tftDetails);
+  const ledDimensions = getLedDimensions(state.config, state.tables);
+  const ledCalculation = calculateLedPanel({
+    moduleCode: state.config.ledModuleCode,
+    widthMm: ledDimensions.widthMm,
+    heightMm: ledDimensions.heightMm,
+    consumptionFactor: Number(state.config.ledCurrentAdjustmentPercent || 100) / 100,
+    faAdjustment: Number(state.config.ledFaAdjustment || 0)
+  }, state.tables);
+  const mechanics = calculateMechanics({
+    model: currentModel?.model,
+    technology: currentModel?.technology,
+    widthMm: currentModel?.technology === "LED"
+      ? (state.config.ledMechanicsMode === "Manual" ? Number(state.config.ledManualWidthMm) : Number(state.config.widthMm))
+      : tftDimensions.mechanicalWidthMm,
+    heightMm: currentModel?.technology === "LED"
+      ? (state.config.ledMechanicsMode === "Manual" ? Number(state.config.ledManualHeightMm) : Number(state.config.heightMm))
+      : tftDimensions.mechanicalHeightMm,
+    sizeInches: tftDetails.inches,
+    tftOuterSizeMm: tftDetails.outerSize,
+    visibleAreaMm: tftDetails.visibleArea,
+    hasClock: Boolean(state.config.options["1L"]),
+    protectionType: state.config.options["3"],
+    doorType: state.config.options["2"],
+    material: currentModel?.technology === "LED" ? state.config.ledMaterial : state.config.tftMaterial,
+    sheetThicknessMm: currentModel?.technology === "TFT" ? state.config.tftSheetThicknessMm : undefined,
+    selectedMechanicalOptions: [],
+    formulas: state.formulas
+  }, state.tables);
+  const calculatedFields = buildCalculatedFields({
+    mechanics,
+    ledCalculation,
+    costing: state.costing,
+    currentModel,
+    formulaContext: mechanics.formulaContext
+  });
+  return {
+    ...state,
+    currentModel,
+    modelRows,
+    optionGroups,
+    tftDetails,
+    filteredTfts,
+    tftDimensions,
+    ledDimensions,
+    ledCalculation,
+    mechanics,
+    formulas: state.formulas,
+    formulaContextRows: formulaContextRows(mechanics.formulaContext || {}),
+    calculatedFields,
+    formulaEditorMessage: state.formulaEditorMessage,
+    roleLabel: ROLES[state.role]?.label || state.role,
+    isNueso: isNuesoRole(state.role),
+    canUpload: can(state.role, "TABLE_UPLOAD"),
+    canUpdateBom: can(state.role, "BOM_RECALCULATE"),
+    canApproveCost: can(state.role, "COST_APPROVE"),
+    canEditFormulas: can(state.role, "FORMULA_EDIT")
+  };
+}
+
+function render() {
+  const viewState = deriveViewState();
+  app.innerHTML = `
+    ${renderHeader(viewState)}
+    <div class="layout">
+      ${renderSidebar(state.route, { isNueso: viewState.isNueso })}
+      <main class="content">${renderRoute(viewState)}</main>
+    </div>
+  `;
+  bindHeader({
+    setRole: (role) => {
+      state.role = role;
+      persistLocalState();
+      render();
+    },
+    exportTrace: () => downloadJson("trazabilidad-configurador-swarco.json", buildTrace(viewState))
+  });
+  bindEvents(viewState);
+}
+
+function renderRoute(viewState) {
+  if (state.route === "maintenance") return maintenanceView(viewState);
+  if (state.route === "model") return modelSelectionView(viewState);
+  if (state.route === "config") return viewState.currentModel?.technology === "LED" ? ledView(viewState) : tftView(viewState);
+  if (state.route === "mechanics") return mechanicsView(viewState);
+  if (state.route === "formulas") return viewState.isNueso ? formulasView(viewState) : modelSelectionView(viewState);
+  if (state.route === "bom") return bomView(viewState);
+  if (state.route === "costing") return costingView(viewState);
+  return modelSelectionView(viewState);
+}
+
+function bindEvents(viewState) {
+  document.querySelectorAll("[data-route]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.route = button.dataset.route;
+      render();
+    });
+  });
+  document.querySelector("#resetFormulas")?.addEventListener("click", () => {
+    state.formulas = mergeFormulas(defaultFormulas);
+    state.formulaEditorMessage = "Formulas restauradas";
+    persistLocalState();
+    render();
+  });
+  document.querySelector("#saveFormulas")?.addEventListener("click", () => {
+    document.querySelectorAll("[data-formula-key]").forEach((textarea) => {
+      const key = textarea.dataset.formulaKey;
+      state.formulas[key] = { ...state.formulas[key], expression: textarea.value.trim() };
+    });
+    state.formulaEditorMessage = "Formulas aplicadas";
+    markBomPending();
+    persistLocalState();
+    render();
+  });
+  document.querySelector("#modelSelect")?.addEventListener("change", (event) => {
+    state.selectedModel = event.target.value;
+    resetConfigurationForModel();
+    markBomPending();
+    persistLocalState();
+    render();
+  });
+  document.querySelector("#validateTables")?.addEventListener("click", () => {
+    state.issues = validateTables(state.tables);
+    render();
+  });
+  document.querySelectorAll("[data-upload]").forEach((input) => {
+    input.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const key = input.dataset.upload;
+      const previous = state.versions[key];
+      const imported = await readWorkbookFile(file, key, ROLES[state.role]?.label || state.role);
+      state.tables[key] = imported.rows;
+      state.versions[key] = imported.version;
+      state.changes[key] = detectChange(key, previous, imported.version);
+      if (state.changes[key].recommendation.includes("BOM")) markBomPending();
+      state.models = getModels(state.tables.trl);
+      if (!state.models.some((model) => model.model === state.selectedModel)) {
+        state.selectedModel = state.models[0]?.model || "";
+        resetConfigurationForModel();
+      }
+      persistLocalState();
+      render();
+    });
+  });
+  document.querySelector("#tftSelect")?.addEventListener("change", (event) => {
+    state.config.tftCode = event.target.value;
+    markBomPending();
+    persistLocalState();
+    render();
+  });
+  document.querySelector("#ledSelect")?.addEventListener("change", (event) => {
+    state.config.ledModuleCode = event.target.value;
+    markBomPending();
+    persistLocalState();
+    render();
+  });
+  document.querySelectorAll("[data-config]").forEach((control) => {
+    control.addEventListener("input", handleConfigChange);
+    control.addEventListener("change", handleConfigChange);
+  });
+  document.querySelectorAll("[data-option-group]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const group = input.dataset.optionGroup;
+      if (input.type === "checkbox") {
+        const current = new Set(state.config.options[group] || []);
+        input.checked ? current.add(input.value) : current.delete(input.value);
+        state.config.options[group] = [...current];
+      } else {
+        state.config.options[group] = input.value;
+      }
+      markBomPending();
+      persistLocalState();
+      render();
+    });
+  });
+  document.querySelector("#updateBom")?.addEventListener("click", () => updateBom(viewState));
+  document.querySelectorAll("[data-bom-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.bomTab = button.dataset.bomTab;
+      render();
+    });
+  });
+  document.querySelector("#exportBomCsv")?.addEventListener("click", () => downloadCsv("bom-consolidada-swarco.csv", state.costing.rows));
+  document.querySelector("#approveCost")?.addEventListener("click", () => {
+    state.costApproved = true;
+    persistLocalState();
+    render();
+  });
+}
+
+function resetConfigurationForModel() {
+  const currentModel = state.models.find((model) => model.model === state.selectedModel) || state.models[0];
+  const modelRows = getModelTrl(state.tables.trl, currentModel?.model);
+  state.config.options = getDefaultConfiguration(modelRows);
+  state.config.tftCode = state.tables.ct_tft[0]?.code || "";
+  state.config.ledModuleCode = state.tables.ct_led[0]?.code || "";
+  state.config.widthMm = currentModel?.technology === "LED" ? 1280 : 700;
+  state.config.heightMm = currentModel?.technology === "LED" ? 720 : 420;
+  state.config.consumptionFactor = 1;
+  const firstTft = state.tables.ct_tft[0] || {};
+  state.config.tftSizeInches = firstTft.inches || "";
+  state.config.tftAspectRatio = firstTft.format || "";
+  state.config.tftBrightness = "";
+  state.config.tftResolution = "";
+  state.config.tftTempRange = "";
+  state.config.tftManufacturer = "";
+  const baseDimensions = getBaseDimensions(currentModel?.model);
+  if (currentModel?.technology === "TFT" && baseDimensions) {
+    state.config.tftMechanicalWidthMm = baseDimensions.totalWidthMm;
+    state.config.tftMechanicalHeightMm = baseDimensions.totalHeightMm;
+    state.config.tftSheetThicknessMm = state.config.tftSheetThicknessMm || 2;
+  }
+  const firstLed = state.tables.ct_led[0] || {};
+  state.config.ledColor = firstLed.color || "";
+  state.config.ledPitch = firstLed.pitchX && firstLed.pitchY ? `${firstLed.pitchX}|${firstLed.pitchY}` : "";
+}
+
+function handleConfigChange(event) {
+  const key = event.currentTarget.dataset.config;
+  if (!key) return;
+  const value = event.currentTarget.type === "number" ? Number(event.currentTarget.value) : event.currentTarget.value;
+  state.config[key] = value;
+  if (key === "tftSizeMode" || key === "tftSizeInches" || key.startsWith("tft")) syncTftSelection();
+  if (key.startsWith("tft") || key.startsWith("led") || ["widthMm", "heightMm"].includes(key)) markBomPending();
+  persistLocalState();
+  render();
+}
+
+function syncTftSelection() {
+  if (state.config.tftSizeMode === "Pulgadas/inches" && !state.config.tftSizeInches) {
+    state.config.tftSizeInches = [...new Set(state.tables.ct_tft.map((row) => row.inches).filter(Boolean).map(String))][0] || "";
+  }
+  const options = filterTfts(state.tables.ct_tft, state.config);
+  if (!options.some((row) => row.code === state.config.tftCode)) {
+    state.config.tftCode = options[0]?.code || "";
+  }
+}
+
+function updateBom(viewState) {
+  const modelRoots = getAllModelRoots(state.tables.trl);
+  const roots = modelRoots.length ? modelRoots : selectedRoots(viewState.modelRows, state.config.options);
+  const exploded = explodeBom({ roots: [...new Set(roots)], cplismatRows: state.tables.cplismat, maxLevel: 6 });
+  const consolidated = consolidateBom(exploded, state.tables);
+  const costing = calculateCosts(consolidated, state.tables, viewState.mechanics);
+  state.bom = {
+    status: exploded.some((row) => row.warning) ? "BOM_CON_ERRORES" : "BOM_ACTUALIZADA",
+    version: `BOM-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`,
+    generatedAt: new Date().toISOString(),
+    generatedBy: ROLES[state.role]?.label || state.role,
+    sourceVersions: Object.fromEntries(Object.entries(state.versions).map(([key, version]) => [key, version?.checksum || "demo"])),
+    exploded,
+    consolidated: costing.rows
+  };
+  state.costing = costing;
+  state.bomTab = "consolidated";
+  persistLocalState();
+  render();
+}
+
+function markBomPending() {
+  if (state.bom.status === "BOM_ACTUALIZADA") state.bom.status = "BOM_PENDIENTE_ACTUALIZACION";
+  state.costApproved = false;
+}
+
+function buildTrace(viewState) {
+  return {
+    generatedAt: new Date().toISOString(),
+    role: viewState.roleLabel,
+    model: viewState.currentModel,
+    configuration: state.config,
+    tableVersions: state.versions,
+    formulas: state.formulas,
+    bom: state.bom,
+    costing: state.costing
+  };
+}
+
+function persistLocalState() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({
+      role: state.role,
+      versions: state.versions,
+      changes: state.changes,
+      selectedModel: state.selectedModel,
+      config: state.config,
+      formulas: state.formulas,
+      bom: {
+        status: state.bom.status,
+        version: state.bom.version,
+        generatedAt: state.bom.generatedAt,
+        generatedBy: state.bom.generatedBy,
+        sourceVersions: state.bom.sourceVersions
+      },
+      costApproved: state.costApproved
+    }));
+  } catch (error) {
+    console.warn("No se pudo guardar el estado local ligero", error);
+  }
+}
+
+function restoreLocalState() {
+  const raw = localStorage.getItem(storageKey);
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    state.role = saved.role || state.role;
+    state.versions = saved.versions || {};
+    state.changes = saved.changes || {};
+    state.selectedModel = saved.selectedModel || "";
+    state.config = { ...state.config, ...(saved.config || {}) };
+    state.formulas = mergeFormulas(saved.formulas || {});
+    state.bom = { ...state.bom, ...(saved.bom || {}), exploded: [], consolidated: [] };
+    state.costApproved = Boolean(saved.costApproved);
+  } catch (error) {
+    console.warn("No se pudo restaurar el estado local", error);
+  }
+}
+
+function buildCalculatedFields({ mechanics, ledCalculation, costing, currentModel }) {
+  const rows = [
+    {
+      key: "mechanicalWeightKg",
+      label: "Peso mecanica calculado",
+      category: "Mecanica",
+      value: `${mechanics.mechanicalWeightKg || 0} kg`,
+      formula: mechanics.formulaResults?.mechanicalWeightKg?.expression || state.formulas.mechanicalWeightKg.expression,
+      error: mechanics.formulaResults?.mechanicalWeightKg?.error || "",
+      editable: true
+    },
+    {
+      key: "mechanicalPrice",
+      label: "Coste mecanico",
+      category: "Mecanica",
+      value: money(mechanics.mechanicalPrice),
+      formula: mechanics.formulaResults?.mechanicalPrice?.expression || state.formulas.mechanicalPrice.expression,
+      error: mechanics.formulaResults?.mechanicalPrice?.error || "",
+      editable: true
+    }
+  ];
+  if (currentModel?.technology === "LED") {
+    rows.push(
+      { key: "ledResolution", label: "Resolucion Real", category: "LED", value: ledCalculation.resolution, formula: "dimensiones_panel / paso_modulo", editable: false },
+      { key: "ledModuleCount", label: "Total numero de modulos", category: "LED", value: ledCalculation.moduleCount, formula: "ceil(columnas_panel / columnas_modulo) * ceil(filas_panel / filas_modulo)", editable: false },
+      { key: "ledPanelCurrent", label: "Corriente panel ajustada", category: "LED", value: `${ledCalculation.panelCurrent.toFixed(2)} A`, formula: "corriente_modulo * numero_modulos * factor_consumo", editable: false },
+      { key: "ledFaCount", label: "Numero de fuentes", category: "LED", value: ledCalculation.faCount, formula: "ceil(corriente_panel / corriente_maxima_fa) + ajuste_fuentes", editable: false },
+      { key: "ledWatts", label: "Consumo maximo panel", category: "LED", value: `${ledCalculation.watts.toFixed(0)} W`, formula: "corriente_panel * voltaje_fa / 0.9", editable: false }
+    );
+  }
+  rows.push({ key: "costTotal", label: "Coste total", category: "Coste", value: money(costing.total), formula: "SUM(BOM consolidada + mecanica)", editable: false });
+  return rows;
+}
+
+function money(value) {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value || 0);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function groupLabel(key) {
+  return {
+    "1": "bastidor",
+    "1L": "reloj",
+    "2": "puerta",
+    "2L": "bandeja LEDs",
+    "3": "IP",
+    "4": "RANGO",
+    "5": "FA",
+    "6": "auxiliares"
+  }[key] || "opciones";
+}
+
+function parseSize(value) {
+  const [width, height] = String(value || "").split("x").map(Number);
+  return { width: Number.isFinite(width) ? width : 0, height: Number.isFinite(height) ? height : 0 };
+}
+
+function getBaseDimensions(model) {
+  return state.tables.dimensiones_base?.find((row) => row.model === model);
+}
+
+function getTftDimensions(config, details) {
+  const base = getBaseDimensions(state.selectedModel) || {};
+  const borderWidthMm = Number(base.borderWidthMm) || 0;
+  const borderHeightMm = Number(base.borderHeightMm) || 0;
+  const visibleFromMechanical = (mechanical, border) => Math.max(0, roundToOne((Number(mechanical) || 0) - (border * 2)));
+  if (config.tftSizeMode === "Largo x Alto") {
+    const width = Number(config.tftMechanicalWidthMm ?? config.tftCustomWidthMm) || 0;
+    const height = Number(config.tftMechanicalHeightMm ?? config.tftCustomHeightMm) || 0;
+    return {
+      visibleWidthMm: visibleFromMechanical(width, borderWidthMm),
+      visibleHeightMm: visibleFromMechanical(height, borderHeightMm),
+      mechanicalWidthMm: width,
+      mechanicalHeightMm: height,
+      borderWidthMm,
+      borderHeightMm,
+      sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
+    };
+  }
+  const visible = parseSize(details.visibleArea);
+  const outer = parseSize(details.outerSize);
+  const mechanicalWidthMm = Number(base.totalWidthMm) || outer.width || visible.width;
+  const mechanicalHeightMm = Number(base.totalHeightMm) || outer.height || visible.height;
+  const visibleWidthMm = borderWidthMm ? visibleFromMechanical(mechanicalWidthMm, borderWidthMm) : (Number(base.visibleWidthMm) || visible.width);
+  const visibleHeightMm = borderHeightMm ? visibleFromMechanical(mechanicalHeightMm, borderHeightMm) : (Number(base.visibleHeightMm) || visible.height);
+  return {
+    visibleWidthMm,
+    visibleHeightMm,
+    mechanicalWidthMm,
+    mechanicalHeightMm,
+    borderWidthMm,
+    borderHeightMm,
+    sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
+  };
+}
+
+function roundToOne(value) {
+  return Math.round(Number(value || 0) * 10) / 10;
+}
+
+function getLedDimensions(config, tables) {
+  const module = tables.ct_led.find((row) => row.code === config.ledModuleCode);
+  const pitchX = Number(module?.pitchX) || Number(String(config.ledPitch).split("|")[0]?.replace(",", ".")) || 1;
+  const pitchY = Number(module?.pitchY) || Number(String(config.ledPitch).split("|")[1]?.replace(",", ".")) || 1;
+  if (config.ledCalcMode === "Manual") {
+    const resolution = parseResolution(config.ledManualResolution);
+    return {
+      widthMm: Math.max(1, Math.round(resolution.x * pitchX)),
+      heightMm: Math.max(1, Math.round(resolution.y * pitchY))
+    };
+  }
+  return { widthMm: Number(config.widthMm) || 1, heightMm: Number(config.heightMm) || 1 };
+}
+
+function parseResolution(value) {
+  const [x, y] = String(value || "").toLowerCase().split("x").map(Number);
+  return { x: Number.isFinite(x) ? x : 1, y: Number.isFinite(y) ? y : 1 };
+}
+
+function filterTfts(rows, config) {
+  if (config.tftSizeMode === "Pulgadas/inches" && !config.tftSizeInches) return [];
+  if (!config.tftAspectRatio) return [];
+  const matches = rows.filter((row) => {
+    return (config.tftSizeMode !== "Pulgadas/inches" || !config.tftSizeInches || String(row.inches) === String(config.tftSizeInches))
+      && row.format === config.tftAspectRatio
+      && (!config.tftBrightness || row.brightness === config.tftBrightness)
+      && (!config.tftResolution || row.resolution === config.tftResolution)
+      && (!config.tftTempRange || row.tempRange === config.tftTempRange)
+      && (!config.tftManufacturer || row.manufacturer === config.tftManufacturer);
+  });
+  return matches;
+}
