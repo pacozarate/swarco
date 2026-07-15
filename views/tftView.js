@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260715-v4-1-5";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260715-v4-1-6";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -164,6 +164,7 @@ function mechanicalSubassembliesTable(rows = []) {
 function tftsTab(state) {
   const details = state.tftDetails;
   const tftOptions = state.filteredTfts;
+  const tftOfferRows = tftOffers(state, tftOptions);
   const dimensions = state.tftDimensions || {};
   return `
     <div class="technical-grid">
@@ -220,6 +221,44 @@ function tftsTab(state) {
         </div>
       </div>
     </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header green">Ofertas TFT - GCESP</header>
+      <div class="tech-card-body">
+        ${tftOffersTable(tftOfferRows)}
+      </div>
+    </article>
+  `;
+}
+
+function tftOffers(state, tftOptions) {
+  const visibleCodes = new Set(tftOptions.map((row) => row.code).filter(Boolean));
+  return (state.tables.gcesp || [])
+    .filter((row) => visibleCodes.has(row.code))
+    .sort((a, b) => naturalCompare(a.code, b.code) || compareDateDesc(a.validFrom, b.validFrom) || Number(a.batch || 0) - Number(b.batch || 0));
+}
+
+function tftOffersTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">No hay ofertas GCESP para las referencias TFT visibles.</div>`;
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>Codigo</th><th>Lote</th><th>Precio</th><th>Fvdesde</th><th>Fvhasta</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.code || "-"}</td>
+              <td class="numeric">${row.batch ?? "-"}</td>
+              <td class="numeric">${formatPrice(row.price)}</td>
+              <td>${row.validFrom || "-"}</td>
+              <td>${row.validTo || "-"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -374,6 +413,20 @@ function withAll(values) {
 function formatQuantity(value) {
   const number = Number(value || 0);
   return Number.isInteger(number) ? String(number) : number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatPrice(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(number);
+}
+
+function compareDateDesc(left, right) {
+  return String(right || "").localeCompare(String(left || ""));
+}
+
+function naturalCompare(left, right) {
+  return String(left || "").localeCompare(String(right || ""), "es", { numeric: true, sensitivity: "base" });
 }
 
 function selected(value, code) {
