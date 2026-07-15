@@ -7,8 +7,7 @@ export const tftTabs = [
 export const tftClockPositionOptions = [
   { value: "", label: "Seleccione posicion" },
   { value: "SUPERIOR", label: "Superior" },
-  { value: "LATERAL", label: "Lateral" },
-  { value: "INTEGRADO", label: "Integrado en frontal" }
+  { value: "LATERAL", label: "Lateral" }
 ];
 
 export const tftMechanicalRules = {

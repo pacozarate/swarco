@@ -34,12 +34,12 @@ La aplicacion publicada funcionara desde una URL HTTPS sin necesidad de `start_b
 
 ## Version local consolidada
 
-La version local actual es `4.1.0` con build cache `20260715-v4-1`. La version se muestra en la cabecera de la aplicacion.
+La version local actual es `4.1.1` con build cache `20260715-v4-1-1`. La version se muestra en la cabecera de la aplicacion.
 
 Para evitar cache de modulos antiguos al probar cambios locales, abra:
 
 ```text
-http://127.0.0.1:4173/?fresh=20260715-v4-1
+http://127.0.0.1:4173/?fresh=20260715-v4-1-1
 ```
 
 El procedimiento completo esta en `docs/versionado_local.md`.

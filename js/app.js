@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1";
-import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1";
-import { validateTables } from "./validators.js?v=20260715-v4-1";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1";
-import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1";
-import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1";
-import { renderSidebar } from "./appRouter.js?v=20260715-v4-1";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1";
-import { tftView } from "../views/tftView.js?v=20260715-v4-1";
-import { ledView } from "../views/ledView.js?v=20260715-v4-1";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1";
-import { bomView } from "../views/bomView.js?v=20260715-v4-1";
-import { costingView } from "../views/costingView.js?v=20260715-v4-1";
-import { formulasView } from "../views/formulasView.js?v=20260715-v4-1";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1-1";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1-1";
+import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1-1";
+import { validateTables } from "./validators.js?v=20260715-v4-1-1";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1-1";
+import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1-1";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1-1";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1-1";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1-1";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1-1";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1-1";
+import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1-1";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1-1";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1-1";
+import { renderSidebar } from "./appRouter.js?v=20260715-v4-1-1";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1-1";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1-1";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1-1";
+import { tftView } from "../views/tftView.js?v=20260715-v4-1-1";
+import { ledView } from "../views/ledView.js?v=20260715-v4-1-1";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1-1";
+import { bomView } from "../views/bomView.js?v=20260715-v4-1-1";
+import { costingView } from "../views/costingView.js?v=20260715-v4-1-1";
+import { formulasView } from "../views/formulasView.js?v=20260715-v4-1-1";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.0";
-const appBuild = "20260715-v4-1";
+const appVersion = "4.1.1";
+const appBuild = "20260715-v4-1-1";
 
 app.innerHTML = `
   <section class="screen">
@@ -275,6 +275,7 @@ function deriveViewState() {
 
 function render() {
   if (!isNuesoRole(state.role)) state.nuesoUnlocked = false;
+  if (state.config.tftClockPosition === "INTEGRADO") state.config.tftClockPosition = "";
   if ((!state.nuesoUnlocked || !isNuesoRole(state.role)) && nuesoRoutes.includes(state.route)) state.route = "config";
   const viewState = deriveViewState();
   app.innerHTML = `
@@ -679,14 +680,18 @@ function getTftDimensions(config, details) {
   const borderHeightMm = Number(base.borderHeightMm) || 0;
   const visibleFromMechanical = (mechanical, border) => Math.max(0, roundToOne((Number(mechanical) || 0) - (border * 2)));
   const mechanicalFromVisible = (visible, border) => roundToOne((Number(visible) || 0) + (border * 2));
+  const clockExtensionMm = getClockExtensionMm(config.options?.["1L"]);
+  const clockPosition = String(config.tftClockPosition || "").toUpperCase();
+  const addClockToWidth = clockPosition === "LATERAL" ? clockExtensionMm : 0;
+  const addClockToHeight = clockPosition === "SUPERIOR" ? clockExtensionMm : 0;
   if (config.tftSizeMode === "Largo x Alto") {
-    const width = Number(config.tftMechanicalWidthMm ?? config.tftCustomWidthMm) || 0;
-    const height = Number(config.tftMechanicalHeightMm ?? config.tftCustomHeightMm) || 0;
+    const baseWidth = Number(config.tftMechanicalWidthMm ?? config.tftCustomWidthMm) || 0;
+    const baseHeight = Number(config.tftMechanicalHeightMm ?? config.tftCustomHeightMm) || 0;
     return {
-      visibleWidthMm: visibleFromMechanical(width, borderWidthMm),
-      visibleHeightMm: visibleFromMechanical(height, borderHeightMm),
-      mechanicalWidthMm: width,
-      mechanicalHeightMm: height,
+      visibleWidthMm: visibleFromMechanical(baseWidth, borderWidthMm),
+      visibleHeightMm: visibleFromMechanical(baseHeight, borderHeightMm),
+      mechanicalWidthMm: roundToOne(baseWidth + addClockToWidth),
+      mechanicalHeightMm: roundToOne(baseHeight + addClockToHeight),
       borderWidthMm,
       borderHeightMm,
       sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
@@ -696,17 +701,30 @@ function getTftDimensions(config, details) {
   const fallbackOuter = parseSize(details.outerSize);
   const visibleWidthMm = visible.width || Number(base.visibleWidthMm) || fallbackOuter.width;
   const visibleHeightMm = visible.height || Number(base.visibleHeightMm) || fallbackOuter.height;
-  const mechanicalWidthMm = borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm);
-  const mechanicalHeightMm = borderHeightMm ? mechanicalFromVisible(visibleHeightMm, borderHeightMm) : (fallbackOuter.height || Number(base.totalHeightMm) || visibleHeightMm);
+  const baseMechanicalWidthMm = borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm);
+  const baseMechanicalHeightMm = borderHeightMm ? mechanicalFromVisible(visibleHeightMm, borderHeightMm) : (fallbackOuter.height || Number(base.totalHeightMm) || visibleHeightMm);
   return {
     visibleWidthMm,
     visibleHeightMm,
-    mechanicalWidthMm,
-    mechanicalHeightMm,
+    mechanicalWidthMm: roundToOne(baseMechanicalWidthMm + addClockToWidth),
+    mechanicalHeightMm: roundToOne(baseMechanicalHeightMm + addClockToHeight),
     borderWidthMm,
     borderHeightMm,
     sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
   };
+}
+
+function getClockExtensionMm(clockCode) {
+  if (!clockCode) return 0;
+  const dv = state.tables.alartdv?.find((row) => row.code === clockCode) || {};
+  const article = state.tables.alart?.find((row) => row.code === clockCode) || {};
+  const gcesp = state.tables.gcesp?.find((row) => row.code === clockCode) || {};
+  return parseFirstNumber(dv.dva17) || parseFirstNumber(article.description) || parseFirstNumber(gcesp.description) || 0;
+}
+
+function parseFirstNumber(value) {
+  const match = String(value || "").replace(",", ".").match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
 }
 
 function getReferenceDimensions(currentModel) {
