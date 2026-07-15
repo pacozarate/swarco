@@ -721,6 +721,10 @@ tr:last-child td {
   align-items: center;
 }
 
+.detail-readonly-grid {
+  margin-top: 12px;
+}
+
 .form-label {
   color: var(--color-text);
   font-size: 12px;

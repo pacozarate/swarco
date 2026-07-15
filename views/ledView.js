@@ -1,4 +1,4 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260715-v4-1-1";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260715-v4-1-2";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },

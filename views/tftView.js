@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260715-v4-1-1";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260715-v4-1-2";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -164,6 +164,7 @@ function mechanicalSubassembliesTable(rows = []) {
 function tftsTab(state) {
   const details = state.tftDetails;
   const tftOptions = state.filteredTfts;
+  const dimensions = state.tftDimensions || {};
   return `
     <div class="technical-grid">
       <article class="tech-card">
@@ -187,6 +188,16 @@ function tftsTab(state) {
             <div class="kpi-box"><div class="kpi-label">Formato</div><div class="kpi-value">${details.format || "-"}</div></div>
             <div class="kpi-box"><div class="kpi-label">NITS</div><div class="kpi-value warning">${details.brightness || "-"}</div></div>
             <div class="kpi-box"><div class="kpi-label">Resolucion</div><div class="kpi-value">${details.resolution || "-"}</div></div>
+          </div>
+          <div class="form-grid detail-readonly-grid">
+            ${readRow("Largo visible", formatMm(dimensions.visibleWidthMm), "calculated")}
+            ${readRow("Alto visible", formatMm(dimensions.visibleHeightMm), "calculated")}
+            ${readRow("Largo mecanica", formatMm(dimensions.mechanicalWidthMm), "calculated")}
+            ${readRow("Alto mecanica", formatMm(dimensions.mechanicalHeightMm), "calculated")}
+            ${readRow("Borde largo", formatMm(dimensions.borderWidthMm), "locked")}
+            ${readRow("Borde alto", formatMm(dimensions.borderHeightMm), "locked")}
+            ${readRow("Reloj", clockSummary(state), "calculated")}
+            ${readRow("Posicion reloj", clockPositionSummary(state), "locked")}
           </div>
         </div>
       </article>
@@ -258,6 +269,18 @@ function clockPositionRow(state) {
 
 function shouldShowClockPosition(clockOption) {
   return Boolean(clockOption && clockOption !== "Sin reloj");
+}
+
+function clockSummary(state) {
+  const clockCode = state.config.options["1L"];
+  if (!shouldShowClockPosition(clockCode)) return "Sin reloj";
+  return clockCode;
+}
+
+function clockPositionSummary(state) {
+  if (!shouldShowClockPosition(state.config.options["1L"])) return "-";
+  const option = tftClockPositionOptions.find((item) => item.value === state.config.tftClockPosition);
+  return option?.label || "-";
 }
 
 function manualSizeRows(state) {
@@ -332,6 +355,12 @@ function readRow(label, value, tone = "") {
       <label class="form-label">${label}</label>
       <div class="form-control ${tone}">${value}</div>
   `;
+}
+
+function formatMm(value) {
+  if (value === undefined || value === null || value === "") return "-";
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number} mm` : "-";
 }
 
 function unique(values) {
