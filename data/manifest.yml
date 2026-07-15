@@ -1,0 +1,53 @@
+archivo_original: dbo_alhis.xlsx
+ruta_original: data/raw/dbo_alhis.xlsx
+sha256: 3db8f2cad3a119bd1f89e7409bb2c69a1d4f44b2f2768c985136bdbf1ccddde2
+tamano_bytes: 132099336
+descripcion: Histórico de movimientos de almacén / artículos procedente de ERP
+hojas:
+- nombre: Tipos de Movimiento
+  observacion: Revisar si contiene datos útiles
+- nombre: dbo_alhis
+  filas_aproximadas: 1014360
+  columnas: 32
+columnas:
+- codemp
+- tipcont
+- tipmov
+- codart
+- fecmov
+- fecintro
+- orden
+- almace
+- seriel
+- ubicac
+- cant
+- prec
+- moves
+- clprfab
+- numdoc
+- posicion
+- impmov
+- pmedpon
+- tabauxidhis
+- tipo
+- datvar1
+- datvar2
+- datvar3
+- datvar4
+- datvar5
+- datvar6
+- feccad
+- premedpon
+- cantdobuni
+- numsec
+- tipfac
+- movmanual
+tratamiento:
+- Conservación del Excel original mediante Git LFS
+- Conversión de la hoja dbo_alhis a Parquet
+- Generación de muestra CSV para pruebas
+- Validación técnica de estructura, nulos, fechas y magnitudes económicas
+observaciones:
+- Las fechas pueden venir en formato serial Excel
+- feccad puede contener valores convencionales o anómalos
+- No realizar transformaciones destructivas sin documentación

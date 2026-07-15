@@ -12,7 +12,7 @@ export function renderHeader(state, actions) {
       </div>
       <div class="top-actions">
         <label class="field" style="min-width:220px">
-          <span class="meta-text">Rol simulado</span>
+          <span class="meta-text">Modo de acceso</span>
           <select id="roleSelect">
             ${Object.entries(ROLES).map(([key, role]) => `<option value="${key}" ${state.role === key ? "selected" : ""}>${role.label}</option>`).join("")}
           </select>
@@ -24,6 +24,6 @@ export function renderHeader(state, actions) {
 }
 
 export function bindHeader(actions) {
-  document.querySelector("#roleSelect")?.addEventListener("change", (event) => actions.setRole(event.target.value));
+  document.querySelector("#roleSelect")?.addEventListener("change", (event) => actions.setRole(event.target.value, event.target));
   document.querySelector("#exportTrace")?.addEventListener("click", actions.exportTrace);
 }

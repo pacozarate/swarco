@@ -9,7 +9,11 @@ export const routes = [
 ];
 
 export function renderSidebar(activeRoute, context = {}) {
-  const visibleRoutes = routes.filter((route) => !route.nuesoOnly || context.isNueso);
+  const privilegedRoles = ["tecnico", "responsable", "admin"];
+  const canSeeTechnicalRoutes = context.isNueso === true && privilegedRoles.includes(context.role);
+  const visibleRoutes = canSeeTechnicalRoutes
+    ? routes
+    : routes.filter((route) => route.key === "config");
   return `
     <aside class="sidebar">
       ${visibleRoutes.map((route) => `<button class="nav-button ${activeRoute === route.key ? "active" : ""}" data-route="${route.key}"><span class="nav-icon">${route.icon}</span><span>${route.label}</span></button>`).join("")}

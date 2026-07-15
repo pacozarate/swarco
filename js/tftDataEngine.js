@@ -8,7 +8,7 @@ export function getTftDetails(tftCode, tables) {
     format: dv.dva18 || tft?.format || "",
     brightness: dv.dva19 || tft?.brightness || "",
     resolution: dv.dva20 || tft?.resolution || "",
-    outerSize: dv.dva37 || tft?.outerSize || "",
-    visibleArea: dv.dva38 || tft?.visibleArea || ""
+    outerSize: tft?.outerSize || dv.dva37 || "",
+    visibleArea: tft?.visibleArea || dv.dva38 || ""
   };
 }

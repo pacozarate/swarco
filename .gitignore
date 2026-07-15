@@ -1,8 +1,11 @@
 .DS_Store
 dist/
+~$*.xlsx
+*.tmp
 **/__pycache__/
 *.pyc
 *.pyo
 .env
 .env.*
-
+.venv/
+data/processed/*.duckdb.wal

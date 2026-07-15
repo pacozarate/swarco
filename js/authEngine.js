@@ -1,6 +1,6 @@
 export const ROLES = {
   consulta: {
-    label: "Usuario consulta",
+    label: "Usuario normal",
     permissions: []
   },
   tecnico: {

@@ -1,4 +1,4 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=2";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=3";
 import { loadJson, readWorkbookFile } from "./importExcel.js";
 import { detectChange } from "./changeDetectionEngine.js";
 import { validateTables } from "./validators.js";
@@ -6,21 +6,22 @@ import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getO
 import { getTftDetails } from "./tftDataEngine.js";
 import { calculateLedPanel } from "./ledCalculationEngine.js";
 import { calculateMechanics } from "./mechanicsEngine.js";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js";
 import { explodeBom } from "./bomExplosionEngine.js";
 import { consolidateBom } from "./bomConsolidationEngine.js";
 import { calculateCosts } from "./costingEngine.js";
 import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js";
 import { downloadCsv, downloadJson } from "./exportResults.js";
-import { renderSidebar } from "./appRouter.js?v=2";
-import { bindHeader, renderHeader } from "../views/commonHeader.js";
-import { maintenanceView } from "../views/maintenanceView.js";
-import { modelSelectionView } from "../views/modelSelectionView.js";
-import { tftView } from "../views/tftView.js";
-import { ledView } from "../views/ledView.js";
-import { mechanicsView } from "../views/mechanicsView.js";
-import { bomView } from "../views/bomView.js";
-import { costingView } from "../views/costingView.js";
-import { formulasView } from "../views/formulasView.js";
+import { renderSidebar } from "./appRouter.js?v=3";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=3";
+import { maintenanceView } from "../views/maintenanceView.js?v=3";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=3";
+import { tftView } from "../views/tftView.js?v=4";
+import { ledView } from "../views/ledView.js?v=4";
+import { mechanicsView } from "../views/mechanicsView.js?v=3";
+import { bomView } from "../views/bomView.js?v=3";
+import { costingView } from "../views/costingView.js?v=3";
+import { formulasView } from "../views/formulasView.js?v=3";
 
 const app = document.querySelector("#app");
 
@@ -36,8 +37,9 @@ app.innerHTML = `
 `;
 
 const state = {
-  route: "model",
-  role: "tecnico",
+  route: "config",
+  role: "consulta",
+  nuesoUnlocked: false,
   tables: {},
   versions: {},
   changes: {},
@@ -86,6 +88,7 @@ const state = {
     tftSetup: "SET UP",
     tftSelectionMode: "Selección",
     tftManualPrice: 0,
+    tftClockPosition: "",
     tftSizeInches: "",
     tftMechanicalWidthMm: 700,
     tftMechanicalHeightMm: 420,
@@ -101,6 +104,8 @@ const state = {
     consolidated: []
   },
   bomTab: "exploded",
+  tftTab: "mecanica",
+  ledTab: "mecanica",
   costing: { rows: [], total: 0, missingPrices: 0 },
   formulas: mergeFormulas(),
   formulaEditorMessage: "",
@@ -109,6 +114,30 @@ const state = {
 
 const tableKeys = ["alart", "alhis", "gcesp", "alartdv", "cplismat", "ct_tft", "ct_led", "mecanica", "dimensiones_base", "trl"];
 const storageKey = "swarco-configurator-state-v7";
+const nuesoAccessPassword = "NUESO2026";
+const nuesoRoutes = ["maintenance", "model", "mechanics", "formulas", "bom", "costing"];
+const numericConfigLimits = {
+  widthMm: { min: 1, max: 10000 },
+  heightMm: { min: 1, max: 10000 },
+  consumptionFactor: { min: 0, max: 2 },
+  ledLines: { min: 1, max: 100 },
+  ledCharsPerLine: { min: 1, max: 100 },
+  ledLegibilityDistance: { min: 1, max: 1000 },
+  ledCharSpacing: { min: 0, max: 100 },
+  ledLineSpacing: { min: 0, max: 100 },
+  ledMatrices: { min: 1, max: 1000 },
+  ledMatrixSpacing: { min: 0, max: 1000 },
+  ledFaAdjustment: { min: -100, max: 100 },
+  ledCurrentAdjustmentPercent: { min: 1, max: 100 },
+  ledManualWidthMm: { min: 1, max: 10000 },
+  ledManualHeightMm: { min: 1, max: 10000 },
+  ledQuantity: { min: 1, max: 9999 },
+  tftQuantity: { min: 1, max: 9999 },
+  tftManualPrice: { min: 0, max: 999999 },
+  tftMechanicalWidthMm: { min: 1, max: 10000 },
+  tftMechanicalHeightMm: { min: 1, max: 10000 },
+  tftSheetThicknessMm: { min: 1, max: 5 }
+};
 
 init().catch((error) => {
   console.error("No se pudo iniciar el configurador", error);
@@ -186,6 +215,25 @@ function deriveViewState() {
     selectedMechanicalOptions: [],
     formulas: state.formulas
   }, state.tables);
+  const mechanicalSubassemblies = getMechanicalSubassemblies({
+    modelRows,
+    configuration: state.config.options,
+    tables: state.tables,
+    dimensions: currentModel?.technology === "LED"
+      ? {
+          mechanicalWidthMm: state.config.ledMechanicsMode === "Manual" ? Number(state.config.ledManualWidthMm) : Number(state.config.widthMm),
+          mechanicalHeightMm: state.config.ledMechanicsMode === "Manual" ? Number(state.config.ledManualHeightMm) : Number(state.config.heightMm),
+          sheetThicknessMm: Number(state.config.tftSheetThicknessMm) || 2
+        }
+      : tftDimensions,
+    material: currentModel?.technology === "LED" ? state.config.ledMaterial : state.config.tftMaterial,
+    referenceDimensions: getReferenceDimensions(currentModel)
+  });
+  if (mechanicalSubassemblies.rows.length) {
+    mechanics.mechanicalWeightKg = mechanicalSubassemblies.totalWeightKg;
+    const weightLine = mechanics.breakdown.find((row) => row.concept === "Peso mecanica calculado");
+    if (weightLine) weightLine.amount = mechanicalSubassemblies.totalWeightKg;
+  }
   const calculatedFields = buildCalculatedFields({
     mechanics,
     ledCalculation,
@@ -193,6 +241,7 @@ function deriveViewState() {
     currentModel,
     formulaContext: mechanics.formulaContext
   });
+  const isUnlockedNueso = state.nuesoUnlocked && isNuesoRole(state.role);
   return {
     ...state,
     currentModel,
@@ -204,30 +253,52 @@ function deriveViewState() {
     ledDimensions,
     ledCalculation,
     mechanics,
+    mechanicalSubassemblies,
     formulas: state.formulas,
     formulaContextRows: formulaContextRows(mechanics.formulaContext || {}),
     calculatedFields,
+    tftTab: state.tftTab,
+    ledTab: state.ledTab,
     formulaEditorMessage: state.formulaEditorMessage,
     roleLabel: ROLES[state.role]?.label || state.role,
-    isNueso: isNuesoRole(state.role),
-    canUpload: can(state.role, "TABLE_UPLOAD"),
-    canUpdateBom: can(state.role, "BOM_RECALCULATE"),
-    canApproveCost: can(state.role, "COST_APPROVE"),
-    canEditFormulas: can(state.role, "FORMULA_EDIT")
+    isNueso: isUnlockedNueso,
+    canUpload: isUnlockedNueso && can(state.role, "TABLE_UPLOAD"),
+    canUpdateBom: isUnlockedNueso && can(state.role, "BOM_RECALCULATE"),
+    canApproveCost: isUnlockedNueso && can(state.role, "COST_APPROVE"),
+    canEditFormulas: isUnlockedNueso && can(state.role, "FORMULA_EDIT")
   };
 }
 
 function render() {
+  if (!isNuesoRole(state.role)) state.nuesoUnlocked = false;
+  if ((!state.nuesoUnlocked || !isNuesoRole(state.role)) && nuesoRoutes.includes(state.route)) state.route = "config";
   const viewState = deriveViewState();
   app.innerHTML = `
     ${renderHeader(viewState)}
     <div class="layout">
-      ${renderSidebar(state.route, { isNueso: viewState.isNueso })}
+      ${renderSidebar(state.route, { isNueso: viewState.isNueso, role: state.role })}
       <main class="content">${renderRoute(viewState)}</main>
     </div>
   `;
   bindHeader({
-    setRole: (role) => {
+    setRole: (role, control) => {
+      if (isNuesoRole(role)) {
+        const password = window.prompt("Introduzca clave NUESO para acceder como tecnico o administrador:");
+        if (password !== nuesoAccessPassword) {
+          window.alert("Clave incorrecta. Se mantiene el acceso de usuario normal.");
+          state.role = "consulta";
+          state.nuesoUnlocked = false;
+          state.route = "config";
+          if (control) control.value = state.role;
+          persistLocalState();
+          render();
+          return;
+        }
+        state.nuesoUnlocked = true;
+      } else {
+        state.nuesoUnlocked = false;
+        if (nuesoRoutes.includes(state.route)) state.route = "config";
+      }
       state.role = role;
       persistLocalState();
       render();
@@ -238,6 +309,7 @@ function render() {
 }
 
 function renderRoute(viewState) {
+  if (!viewState.isNueso && nuesoRoutes.includes(state.route)) return viewState.currentModel?.technology === "LED" ? ledView(viewState) : tftView(viewState);
   if (state.route === "maintenance") return maintenanceView(viewState);
   if (state.route === "model") return modelSelectionView(viewState);
   if (state.route === "config") return viewState.currentModel?.technology === "LED" ? ledView(viewState) : tftView(viewState);
@@ -251,7 +323,27 @@ function renderRoute(viewState) {
 function bindEvents(viewState) {
   document.querySelectorAll("[data-route]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.route = button.dataset.route;
+      const nextRoute = button.dataset.route;
+      if ((!state.nuesoUnlocked || !isNuesoRole(state.role)) && nuesoRoutes.includes(nextRoute)) {
+        state.route = "config";
+        render();
+        return;
+      }
+      state.route = nextRoute;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-config-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.tftTab = button.dataset.configTab || "mecanica";
+      persistLocalState();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-led-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ledTab = button.dataset.ledTab || "mecanica";
+      persistLocalState();
       render();
     });
   });
@@ -273,6 +365,8 @@ function bindEvents(viewState) {
   });
   document.querySelector("#modelSelect")?.addEventListener("change", (event) => {
     state.selectedModel = event.target.value;
+    state.tftTab = "mecanica";
+    state.ledTab = "mecanica";
     resetConfigurationForModel();
     markBomPending();
     persistLocalState();
@@ -352,19 +446,22 @@ function resetConfigurationForModel() {
   const currentModel = state.models.find((model) => model.model === state.selectedModel) || state.models[0];
   const modelRows = getModelTrl(state.tables.trl, currentModel?.model);
   state.config.options = getDefaultConfiguration(modelRows);
-  state.config.tftCode = state.tables.ct_tft[0]?.code || "";
+  state.tftTab = "mecanica";
+  state.ledTab = "mecanica";
   state.config.ledModuleCode = state.tables.ct_led[0]?.code || "";
   state.config.widthMm = currentModel?.technology === "LED" ? 1280 : 700;
   state.config.heightMm = currentModel?.technology === "LED" ? 720 : 420;
   state.config.consumptionFactor = 1;
+  const baseDimensions = getBaseDimensions(currentModel?.model);
   const firstTft = state.tables.ct_tft[0] || {};
-  state.config.tftSizeInches = firstTft.inches || "";
-  state.config.tftAspectRatio = firstTft.format || "";
+  const modelTft = state.tables.ct_tft.find((row) => String(row.inches) === String(baseDimensions?.inches)) || firstTft;
+  state.config.tftCode = modelTft.code || "";
+  state.config.tftSizeInches = modelTft.inches || "";
+  state.config.tftAspectRatio = modelTft.format || "";
   state.config.tftBrightness = "";
   state.config.tftResolution = "";
   state.config.tftTempRange = "";
   state.config.tftManufacturer = "";
-  const baseDimensions = getBaseDimensions(currentModel?.model);
   if (currentModel?.technology === "TFT" && baseDimensions) {
     state.config.tftMechanicalWidthMm = baseDimensions.totalWidthMm;
     state.config.tftMechanicalHeightMm = baseDimensions.totalHeightMm;
@@ -378,7 +475,7 @@ function resetConfigurationForModel() {
 function handleConfigChange(event) {
   const key = event.currentTarget.dataset.config;
   if (!key) return;
-  const value = event.currentTarget.type === "number" ? Number(event.currentTarget.value) : event.currentTarget.value;
+  const value = event.currentTarget.type === "number" ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
   state.config[key] = value;
   if (key === "tftSizeMode" || key === "tftSizeInches" || key.startsWith("tft")) syncTftSelection();
   if (key.startsWith("tft") || key.startsWith("led") || ["widthMm", "heightMm"].includes(key)) markBomPending();
@@ -442,6 +539,8 @@ function persistLocalState() {
       versions: state.versions,
       changes: state.changes,
       selectedModel: state.selectedModel,
+      tftTab: state.tftTab,
+      ledTab: state.ledTab,
       config: state.config,
       formulas: state.formulas,
       bom: {
@@ -463,17 +562,38 @@ function restoreLocalState() {
   if (!raw) return;
   try {
     const saved = JSON.parse(raw);
-    state.role = saved.role || state.role;
+    const savedRole = saved.role || state.role;
+    state.role = isNuesoRole(savedRole) ? "consulta" : savedRole;
+    state.nuesoUnlocked = false;
     state.versions = saved.versions || {};
     state.changes = saved.changes || {};
     state.selectedModel = saved.selectedModel || "";
+    state.tftTab = ["mecanica", "tfts", "modulos"].includes(saved.tftTab) ? saved.tftTab : "mecanica";
+    state.ledTab = ["mecanica", "led"].includes(saved.ledTab) ? saved.ledTab : "mecanica";
+    const defaultConfig = { ...state.config };
     state.config = { ...state.config, ...(saved.config || {}) };
+    sanitizeConfig(defaultConfig);
     state.formulas = mergeFormulas(saved.formulas || {});
     state.bom = { ...state.bom, ...(saved.bom || {}), exploded: [], consolidated: [] };
     state.costApproved = Boolean(saved.costApproved);
   } catch (error) {
     console.warn("No se pudo restaurar el estado local", error);
   }
+}
+
+function sanitizeConfig(defaultConfig = {}) {
+  Object.keys(numericConfigLimits).forEach((key) => {
+    if (key in state.config) state.config[key] = sanitizeNumericConfigValue(key, state.config[key], defaultConfig[key]);
+  });
+}
+
+function sanitizeNumericConfigValue(key, value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback ?? state.config?.[key] ?? 0;
+  const limits = numericConfigLimits[key];
+  if (!limits) return number;
+  if (number < limits.min || number > limits.max) return fallback ?? Math.min(limits.max, Math.max(limits.min, number));
+  return number;
 }
 
 function buildCalculatedFields({ mechanics, ledCalculation, costing, currentModel }) {
@@ -550,6 +670,7 @@ function getTftDimensions(config, details) {
   const borderWidthMm = Number(base.borderWidthMm) || 0;
   const borderHeightMm = Number(base.borderHeightMm) || 0;
   const visibleFromMechanical = (mechanical, border) => Math.max(0, roundToOne((Number(mechanical) || 0) - (border * 2)));
+  const mechanicalFromVisible = (visible, border) => roundToOne((Number(visible) || 0) + (border * 2));
   if (config.tftSizeMode === "Largo x Alto") {
     const width = Number(config.tftMechanicalWidthMm ?? config.tftCustomWidthMm) || 0;
     const height = Number(config.tftMechanicalHeightMm ?? config.tftCustomHeightMm) || 0;
@@ -564,11 +685,11 @@ function getTftDimensions(config, details) {
     };
   }
   const visible = parseSize(details.visibleArea);
-  const outer = parseSize(details.outerSize);
-  const mechanicalWidthMm = Number(base.totalWidthMm) || outer.width || visible.width;
-  const mechanicalHeightMm = Number(base.totalHeightMm) || outer.height || visible.height;
-  const visibleWidthMm = borderWidthMm ? visibleFromMechanical(mechanicalWidthMm, borderWidthMm) : (Number(base.visibleWidthMm) || visible.width);
-  const visibleHeightMm = borderHeightMm ? visibleFromMechanical(mechanicalHeightMm, borderHeightMm) : (Number(base.visibleHeightMm) || visible.height);
+  const fallbackOuter = parseSize(details.outerSize);
+  const visibleWidthMm = visible.width || Number(base.visibleWidthMm) || fallbackOuter.width;
+  const visibleHeightMm = visible.height || Number(base.visibleHeightMm) || fallbackOuter.height;
+  const mechanicalWidthMm = borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm);
+  const mechanicalHeightMm = borderHeightMm ? mechanicalFromVisible(visibleHeightMm, borderHeightMm) : (fallbackOuter.height || Number(base.totalHeightMm) || visibleHeightMm);
   return {
     visibleWidthMm,
     visibleHeightMm,
@@ -577,6 +698,16 @@ function getTftDimensions(config, details) {
     borderWidthMm,
     borderHeightMm,
     sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
+  };
+}
+
+function getReferenceDimensions(currentModel) {
+  const base = getBaseDimensions(currentModel?.model) || {};
+  return {
+    mechanicalWidthMm: Number(base.totalWidthMm) || 0,
+    mechanicalHeightMm: Number(base.totalHeightMm) || 0,
+    sheetThicknessMm: 2,
+    material: base.material || (currentModel?.technology === "LED" ? "ALU" : "GALVA")
   };
 }
 
