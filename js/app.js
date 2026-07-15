@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1-3";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1-3";
-import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1-3";
-import { validateTables } from "./validators.js?v=20260715-v4-1-3";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1-3";
-import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1-3";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1-3";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1-3";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1-3";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1-3";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1-3";
-import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1-3";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1-3";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1-3";
-import { renderSidebar } from "./appRouter.js?v=20260715-v4-1-3";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1-3";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1-3";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1-3";
-import { tftView } from "../views/tftView.js?v=20260715-v4-1-3";
-import { ledView } from "../views/ledView.js?v=20260715-v4-1-3";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1-3";
-import { bomView } from "../views/bomView.js?v=20260715-v4-1-3";
-import { costingView } from "../views/costingView.js?v=20260715-v4-1-3";
-import { formulasView } from "../views/formulasView.js?v=20260715-v4-1-3";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1-4";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1-4";
+import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1-4";
+import { validateTables } from "./validators.js?v=20260715-v4-1-4";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1-4";
+import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1-4";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1-4";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1-4";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1-4";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1-4";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1-4";
+import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1-4";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1-4";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1-4";
+import { renderSidebar } from "./appRouter.js?v=20260715-v4-1-4";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1-4";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1-4";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1-4";
+import { tftView } from "../views/tftView.js?v=20260715-v4-1-4";
+import { ledView } from "../views/ledView.js?v=20260715-v4-1-4";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1-4";
+import { bomView } from "../views/bomView.js?v=20260715-v4-1-4";
+import { costingView } from "../views/costingView.js?v=20260715-v4-1-4";
+import { formulasView } from "../views/formulasView.js?v=20260715-v4-1-4";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.3";
-const appBuild = "20260715-v4-1-3";
+const appVersion = "4.1.4";
+const appBuild = "20260715-v4-1-4";
 
 app.innerHTML = `
   <section class="screen">
@@ -665,9 +665,29 @@ function groupLabel(key) {
   }[key] || "opciones";
 }
 
-function parseSize(value) {
+function parseSize(value, aspectRatio = "") {
   const [width, height] = String(value || "").split("x").map(Number);
-  return { width: Number.isFinite(width) ? width : 0, height: Number.isFinite(height) ? height : 0 };
+  return normalizeTftSize({
+    width: Number.isFinite(width) ? width : 0,
+    height: Number.isFinite(height) ? height : 0
+  }, aspectRatio);
+}
+
+function normalizeTftSize(size, aspectRatio = "") {
+  const width = Number(size.width) || 0;
+  const height = Number(size.height) || 0;
+  const ratio = parseAspectRatio(aspectRatio);
+  if (!width || !height || !ratio) return { width, height };
+  const measuredRatio = width / height;
+  if (measuredRatio > ratio * 2.5) return { width: roundToOne(height * ratio), height };
+  if (measuredRatio < ratio / 2.5) return { width, height: roundToOne(width / ratio) };
+  return { width, height };
+}
+
+function parseAspectRatio(value) {
+  const [left, right] = String(value || "").replace(",", ".").split(":").map(Number);
+  if (!Number.isFinite(left) || !Number.isFinite(right) || !right) return 0;
+  return left / right;
 }
 
 function getBaseDimensions(model) {
@@ -697,8 +717,8 @@ function getTftDimensions(config, details) {
       sheetThicknessMm: Number(config.tftSheetThicknessMm) || 0
     };
   }
-  const visible = parseSize(details.visibleArea);
-  const fallbackOuter = parseSize(details.outerSize);
+  const visible = parseSize(details.visibleArea, config.tftAspectRatio);
+  const fallbackOuter = parseSize(details.outerSize, config.tftAspectRatio);
   const visibleWidthMm = visible.width || Number(base.visibleWidthMm) || fallbackOuter.width;
   const visibleHeightMm = visible.height || Number(base.visibleHeightMm) || fallbackOuter.height;
   const baseMechanicalWidthMm = borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm);
