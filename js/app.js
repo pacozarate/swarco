@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1-4";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1-4";
-import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1-4";
-import { validateTables } from "./validators.js?v=20260715-v4-1-4";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1-4";
-import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1-4";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1-4";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1-4";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1-4";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1-4";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1-4";
-import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1-4";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1-4";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1-4";
-import { renderSidebar } from "./appRouter.js?v=20260715-v4-1-4";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1-4";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1-4";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1-4";
-import { tftView } from "../views/tftView.js?v=20260715-v4-1-4";
-import { ledView } from "../views/ledView.js?v=20260715-v4-1-4";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1-4";
-import { bomView } from "../views/bomView.js?v=20260715-v4-1-4";
-import { costingView } from "../views/costingView.js?v=20260715-v4-1-4";
-import { formulasView } from "../views/formulasView.js?v=20260715-v4-1-4";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1-5";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1-5";
+import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1-5";
+import { validateTables } from "./validators.js?v=20260715-v4-1-5";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1-5";
+import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1-5";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1-5";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1-5";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1-5";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1-5";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1-5";
+import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1-5";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1-5";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1-5";
+import { renderSidebar } from "./appRouter.js?v=20260715-v4-1-5";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1-5";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1-5";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1-5";
+import { tftView } from "../views/tftView.js?v=20260715-v4-1-5";
+import { ledView } from "../views/ledView.js?v=20260715-v4-1-5";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1-5";
+import { bomView } from "../views/bomView.js?v=20260715-v4-1-5";
+import { costingView } from "../views/costingView.js?v=20260715-v4-1-5";
+import { formulasView } from "../views/formulasView.js?v=20260715-v4-1-5";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.4";
-const appBuild = "20260715-v4-1-4";
+const appVersion = "4.1.5";
+const appBuild = "20260715-v4-1-5";
 
 app.innerHTML = `
   <section class="screen">
@@ -492,10 +492,28 @@ function syncTftSelection() {
   if (state.config.tftSizeMode === "Pulgadas/inches" && !state.config.tftSizeInches) {
     state.config.tftSizeInches = [...new Set(state.tables.ct_tft.map((row) => row.inches).filter(Boolean).map(String))][0] || "";
   }
+  syncTftAspectRatioForInches();
+  syncTftSecondaryFilters();
   const options = filterTfts(state.tables.ct_tft, state.config);
   if (!options.some((row) => row.code === state.config.tftCode)) {
     state.config.tftCode = options[0]?.code || "";
   }
+}
+
+function syncTftAspectRatioForInches() {
+  if (state.config.tftSizeMode !== "Pulgadas/inches" || !state.config.tftSizeInches) return;
+  const inchRows = state.tables.ct_tft.filter((row) => sameTftInches(row.inches, state.config.tftSizeInches));
+  if (!inchRows.length) return;
+  if (!inchRows.some((row) => row.format === state.config.tftAspectRatio)) {
+    state.config.tftAspectRatio = inchRows[0].format || "";
+  }
+}
+
+function syncTftSecondaryFilters() {
+  if (filterTfts(state.tables.ct_tft, state.config).length) return;
+  ["tftBrightness", "tftResolution", "tftTempRange", "tftManufacturer"].forEach((key) => {
+    state.config[key] = "";
+  });
 }
 
 function updateBom(viewState) {
@@ -784,7 +802,7 @@ function filterTfts(rows, config) {
   if (config.tftSizeMode === "Pulgadas/inches" && !config.tftSizeInches) return [];
   if (!config.tftAspectRatio) return [];
   const matches = rows.filter((row) => {
-    return (config.tftSizeMode !== "Pulgadas/inches" || !config.tftSizeInches || String(row.inches) === String(config.tftSizeInches))
+    return (config.tftSizeMode !== "Pulgadas/inches" || !config.tftSizeInches || sameTftInches(row.inches, config.tftSizeInches))
       && row.format === config.tftAspectRatio
       && (!config.tftBrightness || row.brightness === config.tftBrightness)
       && (!config.tftResolution || row.resolution === config.tftResolution)
@@ -792,4 +810,12 @@ function filterTfts(rows, config) {
       && (!config.tftManufacturer || row.manufacturer === config.tftManufacturer);
   });
   return matches;
+}
+
+function sameTftInches(left, right) {
+  return normalizeTftInches(left) === normalizeTftInches(right);
+}
+
+function normalizeTftInches(value) {
+  return String(value ?? "").trim().replace(",", ".");
 }
