@@ -722,6 +722,7 @@ tr:last-child td {
 }
 
 .detail-readonly-grid {
+  grid-template-columns: 130px minmax(90px, 1fr) 130px minmax(90px, 1fr);
   margin-top: 12px;
 }
 
