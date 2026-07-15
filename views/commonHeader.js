@@ -1,4 +1,4 @@
-import { ROLES } from "../js/authEngine.js";
+import { ROLES } from "../js/authEngine.js?v=20260715-v4-1";
 
 export function renderHeader(state, actions) {
   return `
@@ -7,7 +7,7 @@ export function renderHeader(state, actions) {
         <div class="brand-mark">S</div>
         <div class="brand-copy">
           <strong>Configurador SWARCO</strong>
-          <span>NUESO TECH / NUESO GROUP</span>
+          <span>NUESO TECH / NUESO GROUP · v${state.appVersion || "-"}</span>
         </div>
       </div>
       <div class="top-actions">

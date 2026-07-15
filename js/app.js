@@ -1,29 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=3";
-import { loadJson, readWorkbookFile } from "./importExcel.js";
-import { detectChange } from "./changeDetectionEngine.js";
-import { validateTables } from "./validators.js";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js";
-import { getTftDetails } from "./tftDataEngine.js";
-import { calculateLedPanel } from "./ledCalculationEngine.js";
-import { calculateMechanics } from "./mechanicsEngine.js";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js";
-import { explodeBom } from "./bomExplosionEngine.js";
-import { consolidateBom } from "./bomConsolidationEngine.js";
-import { calculateCosts } from "./costingEngine.js";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js";
-import { downloadCsv, downloadJson } from "./exportResults.js";
-import { renderSidebar } from "./appRouter.js?v=3";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=3";
-import { maintenanceView } from "../views/maintenanceView.js?v=3";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=3";
-import { tftView } from "../views/tftView.js?v=4";
-import { ledView } from "../views/ledView.js?v=4";
-import { mechanicsView } from "../views/mechanicsView.js?v=3";
-import { bomView } from "../views/bomView.js?v=3";
-import { costingView } from "../views/costingView.js?v=3";
-import { formulasView } from "../views/formulasView.js?v=3";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260715-v4-1";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260715-v4-1";
+import { detectChange } from "./changeDetectionEngine.js?v=20260715-v4-1";
+import { validateTables } from "./validators.js?v=20260715-v4-1";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260715-v4-1";
+import { getTftDetails } from "./tftDataEngine.js?v=20260715-v4-1";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260715-v4-1";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260715-v4-1";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260715-v4-1";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260715-v4-1";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260715-v4-1";
+import { calculateCosts } from "./costingEngine.js?v=20260715-v4-1";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260715-v4-1";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260715-v4-1";
+import { renderSidebar } from "./appRouter.js?v=20260715-v4-1";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260715-v4-1";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260715-v4-1";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260715-v4-1";
+import { tftView } from "../views/tftView.js?v=20260715-v4-1";
+import { ledView } from "../views/ledView.js?v=20260715-v4-1";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260715-v4-1";
+import { bomView } from "../views/bomView.js?v=20260715-v4-1";
+import { costingView } from "../views/costingView.js?v=20260715-v4-1";
+import { formulasView } from "../views/formulasView.js?v=20260715-v4-1";
 
 const app = document.querySelector("#app");
+const appVersion = "4.1.0";
+const appBuild = "20260715-v4-1";
 
 app.innerHTML = `
   <section class="screen">
@@ -245,6 +247,8 @@ function deriveViewState() {
   return {
     ...state,
     currentModel,
+    appVersion,
+    appBuild,
     modelRows,
     optionGroups,
     tftDetails,
@@ -522,6 +526,8 @@ function markBomPending() {
 function buildTrace(viewState) {
   return {
     generatedAt: new Date().toISOString(),
+    appVersion,
+    appBuild,
     role: viewState.roleLabel,
     model: viewState.currentModel,
     configuration: state.config,
@@ -536,6 +542,8 @@ function persistLocalState() {
   try {
     localStorage.setItem(storageKey, JSON.stringify({
       role: state.role,
+      appVersion,
+      appBuild,
       versions: state.versions,
       changes: state.changes,
       selectedModel: state.selectedModel,

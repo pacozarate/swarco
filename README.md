@@ -32,6 +32,18 @@ Este repositorio esta preparado para GitHub Pages mediante `.github/workflows/pa
 
 La aplicacion publicada funcionara desde una URL HTTPS sin necesidad de `start_beta.command`.
 
+## Version local consolidada
+
+La version local actual es `4.1.0` con build cache `20260715-v4-1`. La version se muestra en la cabecera de la aplicacion.
+
+Para evitar cache de modulos antiguos al probar cambios locales, abra:
+
+```text
+http://127.0.0.1:4173/?fresh=20260715-v4-1
+```
+
+El procedimiento completo esta en `docs/versionado_local.md`.
+
 ## Datos
 
 Los datos base estan en `data/`. Las tablas que el usuario cargue desde la pantalla `Tablas` se leen en el navegador y quedan en el almacenamiento local de ese equipo.
