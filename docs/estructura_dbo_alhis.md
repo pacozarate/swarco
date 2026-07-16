@@ -66,8 +66,9 @@ La version Excel transforma `dbo_alhis` como historico de movimientos:
 - Tipado funcional: `codart` y `moves` como texto; `fecmov`, `fecintro` y `feccad` como fecha; `cant`, `prec`, `clprfab` y `premedpon` como numericos.
 - Columnas eliminadas: `codemp`, `tipcont`, `fecintro`, `orden`, `almace`, `seriel`, `ubicac`, `numdoc`, `posicion`, `impmov`, `tabauxidhis`, `tipo`, `datvar1` a `datvar6`, `cantdobuni`, `numsec`, `tipfac`, `movmanual`, `pmedpon` y `tipmov`.
 - Filtro principal: `moves = "E"` para conservar entradas de compra/almacen.
+- Filtro app adicional: `fecmov >= 2020-01-01` para no cargar historico antiguo innecesario.
 
-El JSON operativo `data/alhis.json` conserva el historico filtrado con estos campos normalizados:
+El JSON operativo `data/alhis.json` conserva el historico filtrado desde 2020 con estos campos normalizados:
 
 ```text
 code        = codart

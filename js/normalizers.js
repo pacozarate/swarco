@@ -12,7 +12,9 @@ const aliases = {
     dva19: ["dva19"],
     dva20: ["dva20"],
     dva37: ["dva37"],
-    dva38: ["dva38"]
+    dva38: ["dva38"],
+    dva39: ["dva39"],
+    dva40: ["dva40"]
   },
   cplismat: {
     codsup: ["codsup", "padre", "parent"],

@@ -4,6 +4,20 @@
 
 La aplicacion es una web HTML/CSS/JavaScript modular. La persistencia inicial es local al navegador y los datos demo viven en `data/`.
 
+## Estrategia de carga de datos
+
+La carga queda separada en dos fases:
+
+1. El usuario mantiene/actualiza los Excel originales en `DATOS_A_IMPORTAR`.
+2. `scripts/import_actual_data.py` convierte esos Excel en JSON operativos para la app, aplicando filtros antes de escribir `data/*.json`.
+
+Reglas comunes de filtrado:
+
+- Fecha minima operativa: `2020-01-01`.
+- Las tablas historicas con fecha, como `dbo_alhis`, se filtran antes de entrar en la app.
+- Las tablas sin fecha propia, como `alartdv`, se filtran por universo de codigos necesarios: BOM vigente, tarifas, historico reciente, TFT/LED y TRL.
+- El objetivo es que la app no cargue registros antiguos o no referenciados, aunque el Excel bruto siga completo.
+
 Separacion principal:
 
 - `importExcel.js`: lectura de Excel/CSV mediante SheetJS.
@@ -42,6 +56,25 @@ La tabla `cplismat` replica la consulta Power Query de la version Excel para la 
 - JSON generado: `data/cplismat.json` con `codsup`, `codele`, `cannec`, `fecfin` y `tipart`.
 
 Este `tipart` queda disponible para filtrar o auditar componentes de BOM sin volver a consultar `alart`.
+
+### Origen `alartdv`
+
+La tabla `alartdv` replica la consulta Power Query de la version Excel sobre `Alart.xlsx`:
+
+- Origen: tabla/hoja de datos alfa-numericos de articulos.
+- Columnas operativas conservadas: `codart`, `dva17`, `dva18`, `dva19`, `dva20`, `dva37`, `dva38`, `dva39`, `dva40`.
+- Limpieza: `codart` como texto tecnico limpio.
+- Normalizacion: `dva20` se convierte a numero usando cultura espanola, reemplazando punto decimal por coma cuando procede.
+- Filtro app: no tiene fecha propia; se conserva solo si `codart` pertenece al universo de codigos necesarios para la app.
+
+### Origen `dbo_alhis`
+
+La tabla `alhis` replica la consulta Power Query de la version Excel para movimientos historicos:
+
+- Origen Excel: `DATOS_A_IMPORTAR/dbo_alhis.xlsx`, hoja `dbo_alhis`.
+- Filtro Excel: `moves = "E"`.
+- Filtro app adicional: `fecmov >= 2020-01-01`.
+- JSON generado: `data/alhis.json` con historico de entradas recientes y precios de compra.
 
 ## LED
 

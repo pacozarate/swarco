@@ -13,19 +13,38 @@ SOURCE_DIR = Path(
     "03-CALCULO MECANICA/01-CALC_LACROIX/DATOS_A_IMPORTAR"
 )
 ROOT = Path(__file__).resolve().parents[1]
+APP_DATA_CUTOFF = date(2020, 1, 1)
+TRL_OVERRIDES = {
+    "PN524AE01": {"widthMm": 1225, "heightMm": 780, "depthMm": 206.3},
+    "PN531AE01": {"widthMm": 1030, "heightMm": 411, "depthMm": 155},
+    "PN532AE01": {"widthMm": 1030, "heightMm": 411, "depthMm": 334},
+    "PN533AE01": {"widthMm": 1200, "heightMm": 315, "depthMm": 125},
+    "PN534AE01": {"widthMm": 1080, "heightMm": 290, "depthMm": 190},
+}
+TRL_CODE_OVERRIDES = {
+    ("PN533A", "2L", "BANDEJA LEDS"): "PN533AE03",
+}
 
 
 def main() -> None:
     (ROOT / "data/trl").mkdir(parents=True, exist_ok=True)
-    alart_rows = import_alart()
+    alart_rows_all = import_alart()
+    gcesp_rows = import_gcesp(APP_DATA_CUTOFF)
+    alhis_rows = import_alhis(APP_DATA_CUTOFF)
+    ct_tft_rows = import_ct_tft()
+    ct_led_rows = import_ct_led()
+    trl_rows = import_trl()
+    cplismat_rows = import_cplismat(alart_rows_all)
+    needed_codes = collect_app_codes(cplismat_rows, gcesp_rows, alhis_rows, ct_tft_rows, ct_led_rows, trl_rows)
+    alart_rows = [row for row in alart_rows_all if row["code"] in needed_codes]
     write_json(ROOT / "data/alart.json", alart_rows)
-    write_json(ROOT / "data/alartdv.json", import_alartdv())
-    write_json(ROOT / "data/cplismat.json", import_cplismat(alart_rows))
-    write_json(ROOT / "data/gcesp.json", import_gcesp())
-    write_json(ROOT / "data/alhis.json", import_alhis())
-    write_json(ROOT / "data/ct_tft.json", import_ct_tft())
-    write_json(ROOT / "data/ct_led.json", import_ct_led())
-    write_json(ROOT / "data/trl/pn-demo-trl.json", import_trl())
+    write_json(ROOT / "data/alartdv.json", import_alartdv(needed_codes))
+    write_json(ROOT / "data/cplismat.json", cplismat_rows)
+    write_json(ROOT / "data/gcesp.json", gcesp_rows)
+    write_json(ROOT / "data/alhis.json", alhis_rows)
+    write_json(ROOT / "data/ct_tft.json", ct_tft_rows)
+    write_json(ROOT / "data/ct_led.json", ct_led_rows)
+    write_json(ROOT / "data/trl/pn-demo-trl.json", trl_rows)
 
 
 def import_alart() -> list[dict[str, Any]]:
@@ -42,7 +61,7 @@ def import_alart() -> list[dict[str, Any]]:
     ]
 
 
-def import_alartdv() -> list[dict[str, Any]]:
+def import_alartdv(allowed_codes: set[str] | None = None) -> list[dict[str, Any]]:
     rows = sheet_dicts(SOURCE_DIR / "Alart.xlsx", "dat.alfa.num")
     return [
         {
@@ -50,12 +69,14 @@ def import_alartdv() -> list[dict[str, Any]]:
             "dva17": value(row.get("dva17")),
             "dva18": value(row.get("dva18")),
             "dva19": value(row.get("dva19")),
-            "dva20": value(row.get("dva20")),
+            "dva20": number_or_none(row.get("dva20")),
             "dva37": value(row.get("dva37")),
             "dva38": value(row.get("dva38")),
+            "dva39": value(row.get("dva39")),
+            "dva40": value(row.get("dva40")),
         }
         for row in rows
-        if text(row.get("codart"))
+        if text(row.get("codart")) and (allowed_codes is None or code(row.get("codart")) in allowed_codes)
     ]
 
 
@@ -103,7 +124,18 @@ def date_only(item: Any) -> date | None:
         return None
 
 
-def import_gcesp() -> list[dict[str, Any]]:
+def collect_app_codes(*datasets: list[dict[str, Any]]) -> set[str]:
+    codes: set[str] = set()
+    for rows in datasets:
+        for row in rows:
+            for key in ("code", "codsup", "codele", "root", "faCode", "dataCableCode", "powerCableCode"):
+                current = code(row.get(key))
+                if current:
+                    codes.add(current)
+    return codes
+
+
+def import_gcesp(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
     rows = sheet_dicts(SOURCE_DIR / "dbo_gcesp.xlsx", "gcesp")
     return [
         {
@@ -115,19 +147,20 @@ def import_gcesp() -> list[dict[str, Any]]:
             "batch": value(row.get("lote")),
         }
         for row in rows
-        if text(row.get("codart"))
+        if text(row.get("codart")) and (date_only(row.get("fvhasta")) or date.max) >= cutoff
     ]
 
 
-def import_alhis() -> list[dict[str, Any]]:
+def import_alhis(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
     output = []
     for row in sheet_dicts(SOURCE_DIR / "dbo_alhis.xlsx", "dbo_alhis"):
         article_code = code(row.get("codart"))
-        if not article_code or text(row.get("moves")) != "E":
+        movement_date = date_only(row.get("fecmov"))
+        if not article_code or text(row.get("moves")) != "E" or movement_date is None or movement_date < cutoff:
             continue
         output.append({
             "code": article_code,
-            "date": date_value(row.get("fecmov")),
+            "date": movement_date.isoformat(),
             "quantity": number(row.get("cant")),
             "price": number(row.get("prec")),
             "movement": text(row.get("moves")),
@@ -152,7 +185,7 @@ def import_ct_tft() -> list[dict[str, Any]]:
             "brightness": text(row.get("Luminosidad")),
             "resolution": text(row.get("Resolución")),
             "tempRange": text(row.get("Rango Temp.")),
-            "visibleArea": text(row.get("Tamaño área activa")),
+            "visibleArea": normalize_size_text(row.get("Tamaño área activa"), row.get("Aspect ratio")),
             "outerSize": text(row.get("Tamaño_1")),
         }
         for row in rows
@@ -186,13 +219,20 @@ def import_ct_led() -> list[dict[str, Any]]:
 def import_trl() -> list[dict[str, Any]]:
     source = SOURCE_DIR / "Calculation Tool Model List - TRL.xlsx"
     rows = sheet_dicts(source, "Model List")
-    return [
-        {
-            "model": code(row.get("RAIZ")),
-            "group": value(row.get("GRUPO")),
+    output = []
+    for row in rows:
+        model = code(row.get("RAIZ"))
+        group = value(row.get("GRUPO"))
+        item_type = text(row.get("TIPO"))
+        current_code = trl_code(model, group, item_type, code(row.get("CÓDIGO")))
+        if not model or not current_code:
+            continue
+        item = {
+            "model": model,
+            "group": group,
             "groupLabel": text(row.get("GRUPO HERRAMIENT")),
-            "type": text(row.get("TIPO")),
-            "code": code(row.get("CÓDIGO")),
+            "type": item_type,
+            "code": current_code,
             "description": text(row.get("DESCRIPCIÓN HERRAMIENTA") or row.get("DESCRIPCIÓN")),
             "longDescription": text(row.get("DESCRIPCIÓN")),
             "material": text(row.get("MATERIAL")),
@@ -201,12 +241,17 @@ def import_trl() -> list[dict[str, Any]]:
             "heightMm": number(row.get("Alto Total")),
             "depthMm": number(row.get("Fondo Total")),
             "image": text(row.get("IMAGE")),
-            "root": code(row.get("CÓDIGO")),
+            "root": current_code,
             "default": "1" if text(row.get("GRUPO")) == "0" else "",
         }
-        for row in rows
-        if text(row.get("RAIZ")) and text(row.get("CÓDIGO"))
-    ]
+        item.update(TRL_OVERRIDES.get(current_code, {}))
+        output.append(item)
+    return output
+
+
+def trl_code(model: str, group: Any, item_type: str, original_code: str) -> str:
+    key = (model, str(group).upper(), item_type.upper())
+    return TRL_CODE_OVERRIDES.get(key, original_code)
 
 
 def sheet_dicts(path: Path, sheet_name: str, header_row: int = 1) -> Iterable[dict[str, Any]]:
@@ -231,7 +276,7 @@ def unique_headers(headers: list[str]) -> list[str]:
 
 
 def write_json(path: Path, rows: list[dict[str, Any]]) -> None:
-    path.write_text(json.dumps(rows, ensure_ascii=False, indent=2, default=serialize), encoding="utf-8")
+    path.write_text(json.dumps(rows, ensure_ascii=False, indent=2, default=serialize) + "\n", encoding="utf-8")
     print(f"{path.relative_to(ROOT)}: {len(rows)} rows")
 
 
@@ -264,6 +309,50 @@ def number(item: Any) -> float:
         return float(str(item).replace(",", "."))
     except ValueError:
         return 0
+
+
+def number_or_none(item: Any) -> float | None:
+    if item is None or item == "":
+        return None
+    if isinstance(item, (int, float)):
+        return item
+    current = str(item).strip()
+    if "." in current and "," not in current:
+        current = current.replace(".", ",")
+    try:
+        return float(current.replace(".", "").replace(",", "."))
+    except ValueError:
+        return None
+
+
+def normalize_size_text(size: Any, aspect_ratio: Any = "") -> str:
+    current = text(size)
+    if "x" not in current.lower():
+        return current
+    left, right = current.lower().split("x", 1)
+    width = number(left)
+    height = number(right)
+    ratio = aspect_ratio_value(aspect_ratio)
+    if not width or not height or not ratio:
+        return current
+    measured = width / height
+    if measured > ratio * 2.5:
+        width = height * ratio
+    elif measured < ratio / 2.5:
+        height = width / ratio
+    return f"{format_size_number(width)}x{format_size_number(height)}"
+
+
+def aspect_ratio_value(item: Any) -> float:
+    parts = text(item).replace(",", ".").split(":")
+    if len(parts) != 2:
+        return 0
+    left, right = number(parts[0]), number(parts[1])
+    return left / right if right else 0
+
+
+def format_size_number(item: float) -> str:
+    return str(int(item))
 
 
 def date_value(item: Any) -> str:
