@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-29";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-29";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-30";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-30";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -396,10 +396,13 @@ function modulesTab(state) {
   const selectedModules = selectedModuleRows(state);
   const excRows = excReferenceRows(state, selectedModules);
   const excDeductions = excDeductionByGroup(excRows, state);
+  const replacementRows = replacementReferenceRows(excRows, state);
+  const replacementAdditions = replacementAdditionByGroup(replacementRows);
   const moduleSummary = selectedModules.filter((row) => String(row.group) !== "6").map((row) => moduleSummaryRow(row, state));
   const auxiliarySummary = auxiliarySummaryRow(state);
   if (auxiliarySummary) moduleSummary.push(auxiliarySummary);
   applyExcDeductions(moduleSummary, excDeductions);
+  applyReplacementAdditions(moduleSummary, replacementAdditions);
   return `
     <article class="tech-card">
       <header class="tech-card-header">A Modulos seleccionados</header>
@@ -419,6 +422,13 @@ function modulesTab(state) {
       <header class="tech-card-header orange">C Referencias EXC</header>
       <div class="tech-card-body">
         ${excReferencesTable(excRows, state)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header green">D Refs reemplazadas</header>
+      <div class="tech-card-body">
+        ${replacementReferencesTable(replacementRows, state)}
       </div>
     </article>
 
@@ -468,7 +478,7 @@ function moduleSummaryTable(rows) {
             <tr>
               <td>${row.group}</td>
               <td>${row.code}</td>
-              <td>${row.description || row.longDescription || "-"}${row.excDeduction ? ` <span class="inline-deduction">EXC -${formatCurrency(row.excDeduction)}</span>` : ""}</td>
+              <td>${row.description || row.longDescription || "-"}${row.excDeduction ? ` <span class="inline-deduction">EXC -${formatCurrency(row.excDeduction)}</span>` : ""}${row.replacementAddition ? ` <span class="inline-addition">REP +${formatCurrency(row.replacementAddition)}</span>` : ""}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${formatCurrency(row.noMec)}</td>
               <td class="numeric">${formatCurrency(row.mec)}</td>
@@ -495,6 +505,17 @@ function applyExcDeductions(rows, deductions) {
     row.subtotal = Math.max(0, row.subtotal - deduction);
     row.total = Math.max(0, row.total - deduction);
     row.excDeduction = deduction;
+  });
+}
+
+function applyReplacementAdditions(rows, additions) {
+  rows.forEach((row) => {
+    const addition = additions.get(String(row.group)) || 0;
+    if (!addition) return;
+    row.noMec += addition;
+    row.subtotal += addition;
+    row.total += addition;
+    row.replacementAddition = addition;
   });
 }
 
@@ -552,12 +573,15 @@ function excReferenceRows(state, selectedModules) {
     .filter((row) => isExcReference(row.article, state.tables))
     .map((row) => {
       const unitCost = rowCost(row.article, state.tables);
+      const bucket = costBucket(row.article, state.tables);
       return {
         group: moduleRow.group,
         code: row.article,
         description: articleDescription(row.article, state.tables),
         quantity: Number(row.quantity || 0),
         unitCost,
+        noMecUnit: bucket === "mec" ? 0 : unitCost,
+        mecUnit: bucket === "mec" ? unitCost : 0,
         total: unitCost * Number(row.quantity || 0)
       };
     }));
@@ -571,7 +595,7 @@ function excReferencesTable(rows, state) {
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>Precio</th><th>Total</th><th>Anular</th></tr>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>Total</th><th>Anular</th></tr>
         </thead>
         <tbody>
           ${rows.map((row) => {
@@ -584,7 +608,8 @@ function excReferencesTable(rows, state) {
               <td>${row.code}</td>
               <td>${row.description || "-"}</td>
               <td class="numeric ${strikeClass}">${formatQuantity(row.quantity)}</td>
-              <td class="numeric ${strikeClass}">${formatCurrency(row.unitCost)}</td>
+              <td class="numeric ${strikeClass}">${row.noMecUnit ? formatCurrency(row.noMecUnit) : "-"}</td>
+              <td class="numeric ${strikeClass}">${row.mecUnit ? formatCurrency(row.mecUnit) : "-"}</td>
               <td class="numeric ${strikeClass}">${formatCurrency(row.total)}</td>
               <td class="annul-cell"><input type="checkbox" data-exc-annul value="${escapeAttr(key)}" ${selected ? "checked" : ""} /></td>
             </tr>
@@ -609,6 +634,79 @@ function excDeductionByGroup(rows, state) {
     deductions.set(group, (deductions.get(group) || 0) + Number(row.total || 0));
   });
   return deductions;
+}
+
+function replacementReferenceRows(excRows, state) {
+  const annulled = new Set(state.config.excAnnulledRefs || []);
+  return excRows
+    .filter((row) => annulled.has(excReferenceKey(row)))
+    .map((row) => {
+      const key = excReferenceKey(row);
+      const replacement = state.config.excReplacements?.[key] || {};
+      const quantity = sanitizeDisplayQuantity(replacement.quantity || row.quantity || 1);
+      const price = Number(replacement.price || 0);
+      return {
+        key,
+        group: row.group,
+        excCode: row.code,
+        excDescription: row.description,
+        enabled: Boolean(replacement.enabled),
+        code: replacement.code || "",
+        description: replacement.description || "",
+        quantity,
+        price,
+        total: replacement.enabled ? quantity * price : 0
+      };
+    });
+}
+
+function replacementAdditionByGroup(rows) {
+  const additions = new Map();
+  rows.forEach((row) => {
+    if (!row.enabled) return;
+    const group = String(row.group);
+    additions.set(group, (additions.get(group) || 0) + Number(row.total || 0));
+  });
+  return additions;
+}
+
+function replacementReferencesTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">No hay referencias EXC anuladas.</div>`;
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>Reemplazar</th><th>GRP</th><th>Cod EXC</th><th>Codigo nuevo</th><th>Descripcion</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr class="${row.enabled ? "selected" : ""}">
+              <td class="annul-cell"><input type="checkbox" data-exc-replace-enable value="${escapeAttr(row.key)}" ${row.enabled ? "checked" : ""} /></td>
+              <td>${row.group}</td>
+              <td>${row.excCode}</td>
+              <td>${replacementInput(row, "code", row.code, "Codigo", "text")}</td>
+              <td>${replacementInput(row, "description", row.description, "Descripcion", "text")}</td>
+              <td>${replacementQuantitySelect(row)}</td>
+              <td>${replacementInput(row, "price", row.price || "", "Precio", "number")}</td>
+              <td class="numeric">${row.enabled ? formatCurrency(row.total) : "-"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function replacementInput(row, field, value, label, type) {
+  return `<input class="table-input" data-exc-replace-control data-exc-replace-key="${escapeAttr(row.key)}" data-exc-replace-field="${field}" type="${type}" value="${escapeAttr(value)}" placeholder="${label}" ${row.enabled ? "" : "disabled"} />`;
+}
+
+function replacementQuantitySelect(row) {
+  return `
+    <select class="form-select compact-select" data-exc-replace-control data-exc-replace-key="${escapeAttr(row.key)}" data-exc-replace-field="quantity" ${row.enabled ? "" : "disabled"}>
+      ${Array.from({ length: 10 }, (_, index) => index + 1).map((quantity) => `<option value="${quantity}" ${Number(row.quantity) === quantity ? "selected" : ""}>${quantity}</option>`).join("")}
+    </select>
+  `;
 }
 
 function auxiliariesTable(state) {

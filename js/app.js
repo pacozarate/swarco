@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-29";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-29";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-29";
-import { validateTables } from "./validators.js?v=20260716-v4-1-29";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-29";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-29";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-29";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-29";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-29";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-29";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-29";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-29";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-29";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-29";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-29";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-29";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-29";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-29";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-29";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-29";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-29";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-29";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-29";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-29";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-30";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-30";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-30";
+import { validateTables } from "./validators.js?v=20260716-v4-1-30";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-30";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-30";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-30";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-30";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-30";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-30";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-30";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-30";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-30";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-30";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-30";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-30";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-30";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-30";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-30";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-30";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-30";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-30";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-30";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-30";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.29";
-const appBuild = "20260716-v4-1-29";
+const appVersion = "4.1.30";
+const appBuild = "20260716-v4-1-30";
 
 app.innerHTML = `
   <section class="screen">
@@ -61,6 +61,7 @@ const state = {
     ledPitch: "",
     auxiliaryQuantities: {},
     excAnnulledRefs: [],
+    excReplacements: {},
     ledLines: 3,
     ledCharsPerLine: 16,
     ledCharacterFormat: "15x16",
@@ -492,6 +493,25 @@ function bindEvents(viewState) {
       render();
     });
   });
+  document.querySelectorAll("[data-exc-replace-enable]").forEach((input) => {
+    input.addEventListener("change", () => {
+      updateExcReplacement(input.value, "enabled", input.checked);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-exc-replace-control]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const key = input.dataset.excReplaceKey;
+      const field = input.dataset.excReplaceField;
+      const value = field === "quantity" || field === "price" ? sanitizeNumericConfigValue(field === "quantity" ? "auxiliaryQuantity" : "tftManualPrice", input.value) : input.value;
+      updateExcReplacement(key, field, value);
+      if (field === "code") {
+        hydrateExcReplacementFromAlart(key, input.value);
+        persistLocalState();
+      }
+      render();
+    });
+  });
   document.querySelector("#updateBom")?.addEventListener("click", () => updateBom(viewState));
   document.querySelectorAll("[data-bom-tab]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -529,6 +549,7 @@ function resetConfigurationForModel() {
   state.config.tftManufacturer = "";
   state.config.auxiliaryQuantities = {};
   state.config.excAnnulledRefs = [];
+  state.config.excReplacements = {};
   clearTftSelectedPrice();
   if (currentModel?.technology === "TFT" && baseDimensions) {
     state.config.tftMechanicalWidthMm = baseDimensions.totalWidthMm;
@@ -586,6 +607,31 @@ function clearTftSelectedPrice() {
 function clearTftPriceChoice() {
   state.config.tftManualPrice = 0;
   clearTftSelectedPrice();
+}
+
+function updateExcReplacement(key, field, value) {
+  state.config.excReplacements = {
+    ...(state.config.excReplacements || {}),
+    [key]: {
+      ...(state.config.excReplacements?.[key] || {}),
+      [field]: value
+    }
+  };
+  markBomPending();
+  persistLocalState();
+}
+
+function hydrateExcReplacementFromAlart(key, codeValue) {
+  const code = String(codeValue || "").trim();
+  if (!code) return;
+  const article = (state.tables.alart || []).find((row) => row.code === code);
+  if (!article) return;
+  const current = state.config.excReplacements?.[key] || {};
+  state.config.excReplacements[key] = {
+    ...current,
+    description: article.description || current.description || "",
+    price: Number(article.pultcomp || 0) || current.price || 0
+  };
 }
 
 function normalizeManualPriceInput(value) {

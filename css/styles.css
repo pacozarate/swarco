@@ -768,6 +768,21 @@ tr:last-child td {
   padding: 3px 6px;
 }
 
+.table-input {
+  width: 100%;
+  min-width: 90px;
+  min-height: 28px;
+  padding: 3px 6px;
+  border: 1px solid #b7c1c9;
+  border-radius: 4px;
+}
+
+.table-input:disabled,
+.compact-select:disabled {
+  color: #6b7280;
+  background: #eef2f6;
+}
+
 .money-input-wrap {
   position: relative;
   display: grid;
@@ -935,6 +950,13 @@ tr:last-child td {
 .inline-deduction {
   margin-left: 8px;
   color: #b42318;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.inline-addition {
+  margin-left: 8px;
+  color: #067647;
   font-size: 11px;
   font-weight: 900;
 }
