@@ -27,6 +27,7 @@ const aliases = {
   gcesp: {
     code: ["code", "codigo", "articulo", "codart"],
     price: ["price", "precio", "tarifa", "pre"],
+    supplier: ["supplier", "proveedor", "codpro"],
     validFrom: ["validfrom", "fecha", "fecha_tarifa", "valid_from", "fvdesde", "fecact"],
     validTo: ["validto", "valid_to", "fvhasta"],
     batch: ["batch", "lote", "lotecom"],
@@ -114,7 +115,10 @@ const aliases = {
 
 export function normalizeRows(tableName, rows) {
   const key = tableName.toLowerCase();
-  return rows.map((row) => normalizeRow(key, row)).filter((row) => Object.values(row).some((value) => value !== ""));
+  return rows
+    .map((row) => normalizeRow(key, row))
+    .filter((row) => Object.values(row).some((value) => value !== ""))
+    .filter((row) => keepAppRow(key, row));
 }
 
 function normalizeRow(tableName, row) {
@@ -148,7 +152,48 @@ function normalizeRow(tableName, row) {
       if (result[field] !== undefined) result[field] = toNumber(result[field], 0);
     });
   }
+  normalizeAppDates(tableName, result);
   return result;
+}
+
+function keepAppRow(tableName, row) {
+  const cutoff = new Date("2020-01-01T00:00:00");
+  const today = startOfToday();
+  if (tableName === "alhis") {
+    const movementDate = toDate(row.date);
+    return Boolean(row.code)
+      && String(row.movement || "").trim().toUpperCase() === "E"
+      && movementDate !== null
+      && movementDate >= cutoff;
+  }
+  if (tableName === "gcesp") {
+    const validFrom = toDate(row.validFrom) || new Date(0);
+    const validTo = toDate(row.validTo) || new Date("9999-12-31T00:00:00");
+    return Boolean(row.code)
+      && validTo > today
+      && validTo >= cutoff
+      && validFrom < new Date("2027-01-01T00:00:00");
+  }
+  if (tableName === "cplismat") {
+    const validTo = toDate(row.fecfin);
+    return Boolean(row.codsup)
+      && Boolean(row.codele)
+      && Number(row.cannec) > 0
+      && validTo !== null
+      && validTo >= today;
+  }
+  return true;
+}
+
+function normalizeAppDates(tableName, row) {
+  const dateFields = {
+    alhis: ["date", "expiration"],
+    gcesp: ["validFrom", "validTo"],
+    cplismat: ["fecfin"]
+  }[tableName] || [];
+  dateFields.forEach((field) => {
+    if (row[field]) row[field] = formatDate(row[field]);
+  });
 }
 
 function normalizeCodes(tableName, row) {
@@ -176,6 +221,43 @@ function cleanKey(key) {
 function normalizeValue(value) {
   if (value === null || value === undefined) return "";
   return typeof value === "string" ? value.trim() : value;
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const date = new Date(excelEpoch + value * 86400000);
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  }
+  const text = String(value).trim();
+  if (!text) return null;
+  const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const european = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (european) {
+    const year = Number(european[3].length === 2 ? `20${european[3]}` : european[3]);
+    return new Date(year, Number(european[2]) - 1, Number(european[1]));
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function formatDate(value) {
+  const date = toDate(value);
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function toNumber(value, fallback) {
