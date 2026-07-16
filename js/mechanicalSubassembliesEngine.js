@@ -1,4 +1,4 @@
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-18";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-19";
 
 const materialDensities = {
   GALVA: 7850,
@@ -123,12 +123,18 @@ function sheetArea(dimensions = {}) {
     dimensions.weightMechanicalHeightMm || dimensions.mechanicalHeightMm
   );
   const visibleArea = area(dimensions.visibleWidthMm, dimensions.visibleHeightMm);
-  const netArea = outerArea - visibleArea;
+  const clockHoleArea = circleArea(dimensions.clockHoleDiameterMm);
+  const netArea = outerArea - visibleArea - clockHoleArea;
   return netArea > 0 ? netArea : outerArea;
 }
 
 function area(width, height) {
   return (Number(width) || 0) * (Number(height) || 0);
+}
+
+function circleArea(diameter) {
+  const radius = (Number(diameter) || 0) / 2;
+  return radius > 0 ? Math.PI * radius * radius : 0;
 }
 
 function materialDensity(material) {
