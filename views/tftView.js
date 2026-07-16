@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-15";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-16";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -469,7 +469,21 @@ function formatPrice(value) {
 }
 
 function compareDateDesc(left, right) {
-  return String(right || "").localeCompare(String(left || ""));
+  return dateSortValue(right) - dateSortValue(left);
+}
+
+function dateSortValue(value) {
+  if (!value) return 0;
+  const text = String(value).trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) return Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  const esMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (esMatch) {
+    const year = Number(esMatch[3]) < 100 ? 2000 + Number(esMatch[3]) : Number(esMatch[3]);
+    return Date.UTC(year, Number(esMatch[2]) - 1, Number(esMatch[1]));
+  }
+  const parsed = Date.parse(text);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 function naturalCompare(left, right) {
