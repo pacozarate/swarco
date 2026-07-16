@@ -106,6 +106,18 @@ La tabla `gcesp` replica la consulta Power Query sobre `dbo_gcesp.xlsx`:
 - Orden logico para costes: el motor toma la tarifa mas reciente por `validFrom`.
 - JSON generado: `data/gcesp.json`.
 
+### Origen `trl`
+
+La tabla `trl` replica la consulta Power Query sobre `Calculation Tool Model List - TRL.xlsx`:
+
+- Origen Excel: hoja `Model List`.
+- Filtro inicial: se conservan solo filas con la primera columna informada, equivalente a `[Column1] <> null`.
+- Despues se promueven encabezados.
+- Se ignoran columnas auxiliares vacias equivalentes a `Column11`, `Column12` y `Column13`.
+- El importador conserva los campos funcionales usados por la app: familia, grupo, tipo, codigo, descripciones, material, vidrio, imagen y raiz.
+- Se mantienen overrides tecnicos para valores que el Excel fuente trae incompletos pero que la app necesita estables, como dimensiones base de bastidores y una referencia LED corregida.
+- JSON generado: `data/trl/pn-demo-trl.json`.
+
 ## LED
 
 Formulas implementadas:

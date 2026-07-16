@@ -227,7 +227,7 @@ def import_ct_led() -> list[dict[str, Any]]:
 
 def import_trl() -> list[dict[str, Any]]:
     source = SOURCE_DIR / "Calculation Tool Model List - TRL.xlsx"
-    rows = sheet_dicts(source, "Model List")
+    rows = sheet_dicts(source, "Model List", require_first_column=True)
     output = []
     for row in rows:
         model = code(row.get("RAIZ"))
@@ -263,15 +263,17 @@ def trl_code(model: str, group: Any, item_type: str, original_code: str) -> str:
     return TRL_CODE_OVERRIDES.get(key, original_code)
 
 
-def sheet_dicts(path: Path, sheet_name: str, header_row: int = 1) -> Iterable[dict[str, Any]]:
+def sheet_dicts(path: Path, sheet_name: str, header_row: int = 1, require_first_column: bool = False) -> Iterable[dict[str, Any]]:
     wb = load_workbook(path, read_only=True, data_only=True)
     ws = wb[sheet_name]
     header_values = next(ws.iter_rows(min_row=header_row, max_row=header_row, values_only=True))
     headers = unique_headers([text(item) or f"col_{index + 1}" for index, item in enumerate(header_values)])
     for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
-      if not any(cell not in (None, "") for cell in row):
-          continue
-      yield {headers[index]: cell for index, cell in enumerate(row[: len(headers)])}
+        if not any(cell not in (None, "") for cell in row):
+            continue
+        if require_first_column and row[0] in (None, ""):
+            continue
+        yield {headers[index]: cell for index, cell in enumerate(row[: len(headers)])}
 
 
 def unique_headers(headers: list[str]) -> list[str]:
