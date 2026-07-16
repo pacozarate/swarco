@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-12";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-13";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -231,7 +231,7 @@ function tftsTab(state) {
     </article>
 
     <article class="tech-card">
-      <header class="tech-card-header dark">Movimientos TFT - ALHIS</header>
+      <header class="tech-card-header dark">Historico de compras - ALHIS</header>
       <div class="tech-card-body">
         ${tftHistoryTable(tftHistoryRows)}
       </div>
@@ -273,8 +273,8 @@ function tftOffersTable(rows) {
 function tftHistory(state, tftOptions) {
   const visibleCodes = new Set(tftOptions.map((row) => row.code).filter(Boolean));
   return (state.tables.alhis || [])
-    .filter((row) => visibleCodes.has(row.code))
-    .sort((a, b) => naturalCompare(a.code, b.code) || compareDateDesc(a.date, b.date));
+    .filter((row) => visibleCodes.has(row.code) && Number(row.quantity || 0) > 0)
+    .sort((a, b) => compareDateDesc(a.date, b.date) || naturalCompare(a.code, b.code));
 }
 
 function tftHistoryTable(rows) {
@@ -283,7 +283,7 @@ function tftHistoryTable(rows) {
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>Codigo</th><th>Fecha</th><th>Cant.</th><th>Precio</th><th>Precio medio</th><th>Proveedor</th></tr>
+          <tr><th>codart</th><th>fecmov</th><th>cantidad</th><th>precio compra</th><th>proveedor</th><th>fecha caducidad</th></tr>
         </thead>
         <tbody>
           ${rows.map((row) => `
@@ -292,8 +292,8 @@ function tftHistoryTable(rows) {
               <td>${row.date || "-"}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${formatPrice(row.price)}</td>
-              <td class="numeric">${formatPrice(row.averageCost || row.realCost)}</td>
               <td>${row.supplier || "-"}</td>
+              <td>${row.expiration || "-"}</td>
             </tr>
           `).join("")}
         </tbody>
