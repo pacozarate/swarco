@@ -1,4 +1,4 @@
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-17";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-18";
 
 const materialDensities = {
   GALVA: 7850,
@@ -107,14 +107,24 @@ function parseDecimal(value) {
 
 function recalculateVariableWeight(baseWeightKg, { dimensions = {}, material = "GALVA", referenceDimensions = {} }) {
   if (baseWeightKg === "") return "";
-  const currentArea = area(dimensions.mechanicalWidthMm, dimensions.mechanicalHeightMm);
-  const referenceArea = area(referenceDimensions.mechanicalWidthMm, referenceDimensions.mechanicalHeightMm) || currentArea;
+  const currentArea = sheetArea(dimensions);
+  const referenceArea = sheetArea(referenceDimensions) || currentArea;
   const areaFactor = referenceArea ? currentArea / referenceArea : 1;
   const currentThickness = Number(dimensions.sheetThicknessMm) || defaultReferenceThicknessMm;
   const referenceThickness = Number(referenceDimensions.sheetThicknessMm) || defaultReferenceThicknessMm;
   const thicknessFactor = referenceThickness ? currentThickness / referenceThickness : 1;
   const densityFactor = materialDensity(material) / materialDensity(referenceDimensions.material || "GALVA");
   return roundToTwo(baseWeightKg * areaFactor * thicknessFactor * densityFactor);
+}
+
+function sheetArea(dimensions = {}) {
+  const outerArea = area(
+    dimensions.weightMechanicalWidthMm || dimensions.mechanicalWidthMm,
+    dimensions.weightMechanicalHeightMm || dimensions.mechanicalHeightMm
+  );
+  const visibleArea = area(dimensions.visibleWidthMm, dimensions.visibleHeightMm);
+  const netArea = outerArea - visibleArea;
+  return netArea > 0 ? netArea : outerArea;
 }
 
 function area(width, height) {
