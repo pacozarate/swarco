@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-35";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-35";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-36";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-36";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -95,6 +95,8 @@ function mechanicalTab(state) {
         </div>
       </article>
 
+      ${mechanicalCostCard(state)}
+
       <article class="tech-card dimensions-card mechanical-dimensions-card">
         <header class="tech-card-header">Dimensiones TFT / Mecanica</header>
         <div class="tech-card-body form-grid">
@@ -127,6 +129,26 @@ function mechanicalSubassembliesCard(state) {
       </header>
       <div class="tech-card-body">
         ${mechanicalSubassembliesTable(state.mechanicalSubassemblies.rows, state.tables)}
+      </div>
+    </article>
+  `;
+}
+
+function mechanicalCostCard(state) {
+  const calculatedCost = mechanicalSubassembliesCostTotal(state.mechanicalSubassemblies.rows, state.tables);
+  const manualMode = state.config.mechanicalCostMode === "Manual";
+  const visibleCost = manualMode ? Number(state.config.mechanicalManualCost || 0) || 0 : calculatedCost;
+  return `
+    <article class="tech-card mechanical-cost-card">
+      <header class="tech-card-header dark">Coste</header>
+      <div class="tech-card-body">
+        <div class="form-grid">
+          ${selectRow("Modo precio", "mechanicalCostMode", state.config.mechanicalCostMode, ["Manual", "Calculado"], undefined, undefined, "critical")}
+          ${manualMode
+            ? moneyNumberRow("Coste manual", "mechanicalManualCost", state.config.mechanicalManualCost, 0, 999999.99, 0.01, "critical", "confirmMechanicalManualCost")
+            : readRow("Coste calculado", formatCurrency(calculatedCost), "calculated critical")}
+          ${readRow("Coste aplicado", formatCurrency(visibleCost), "calculated critical")}
+        </div>
       </div>
     </article>
   `;
@@ -982,6 +1004,13 @@ function mechanicalUnitPrice(code, tables) {
   };
 }
 
+function mechanicalSubassembliesCostTotal(rows = [], tables = {}) {
+  return rows.reduce((total, row) => {
+    const price = mechanicalUnitPrice(row.code, tables);
+    return total + price.unitPrice * Number(row.quantity || 0);
+  }, 0);
+}
+
 function articleDescription(code, tables) {
   return (tables.alart || []).find((row) => row.code === code)?.description
     || (tables.gcesp || []).find((row) => row.code === code)?.description
@@ -1096,13 +1125,13 @@ function numberRow(label, key, value, min, max, step = 1, tone = "") {
   `;
 }
 
-function moneyNumberRow(label, key, value, min, max, step = 0.01, tone = "") {
+function moneyNumberRow(label, key, value, min, max, step = 0.01, tone = "", confirmId = "confirmTftManualPrice") {
   return `
       <label class="form-label">${label}</label>
       <div class="money-input-wrap">
         <input class="form-control ${tone}" data-config="${key}" type="text" inputmode="decimal" value="${value ?? ""}" data-min="${min}" data-max="${max}" data-step="${step}" />
         <span class="money-input-symbol">€</span>
-        <button type="button" class="row-action-button money-confirm-button" id="confirmTftManualPrice">Confirmar</button>
+        <button type="button" class="row-action-button money-confirm-button" id="${confirmId}">Confirmar</button>
       </div>
   `;
 }

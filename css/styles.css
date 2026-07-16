@@ -660,6 +660,7 @@ tr:last-child td {
   grid-template-columns: minmax(300px, 0.95fr) minmax(300px, 0.85fr) minmax(320px, 1fr);
   grid-template-areas:
     "config image material"
+    "dimensions cost cost"
     "dimensions subassemblies subassemblies";
   gap: 10px;
   align-items: start;
@@ -686,6 +687,10 @@ tr:last-child td {
 
 .mechanical-dimensions-card {
   grid-area: dimensions;
+}
+
+.mechanical-cost-card {
+  grid-area: cost;
 }
 
 .mechanical-subassemblies-card {
@@ -1200,6 +1205,7 @@ tr:last-child td {
       "config"
       "image"
       "material"
+      "cost"
       "dimensions"
       "subassemblies";
   }

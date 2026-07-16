@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-35";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-35";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-35";
-import { validateTables } from "./validators.js?v=20260716-v4-1-35";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-35";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-35";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-35";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-35";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-35";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-35";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-35";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-35";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-35";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-35";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-35";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-35";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-35";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-35";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-35";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-35";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-35";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-35";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-35";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-35";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-36";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-36";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-36";
+import { validateTables } from "./validators.js?v=20260716-v4-1-36";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-36";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-36";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-36";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-36";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-36";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-36";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-36";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-36";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-36";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-36";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-36";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-36";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-36";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-36";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-36";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-36";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-36";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-36";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-36";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-36";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.35";
-const appBuild = "20260716-v4-1-35";
+const appVersion = "4.1.36";
+const appBuild = "20260716-v4-1-36";
 
 app.innerHTML = `
   <section class="screen">
@@ -98,6 +98,8 @@ const state = {
     tftSelectedPrice: 0,
     tftSelectedPriceCode: "",
     tftSelectedPriceLabel: "",
+    mechanicalCostMode: "Calculado",
+    mechanicalManualCost: 0,
     tftClockPosition: "",
     tftSizeInches: "",
     tftMechanicalWidthMm: 700,
@@ -145,6 +147,7 @@ const numericConfigLimits = {
   ledQuantity: { min: 1, max: 9999 },
   tftQuantity: { min: 1, max: 9999 },
   tftManualPrice: { min: 0, max: 999999.99 },
+  mechanicalManualCost: { min: 0, max: 999999.99 },
   auxiliaryQuantity: { min: 1, max: 10 },
   tftMechanicalWidthMm: { min: 1, max: 10000 },
   tftMechanicalHeightMm: { min: 1, max: 10000 },
@@ -456,6 +459,16 @@ function bindEvents(viewState) {
     persistLocalState();
     render();
   });
+  document.querySelector("#confirmMechanicalManualCost")?.addEventListener("click", () => {
+    const input = document.querySelector('[data-config="mechanicalManualCost"]');
+    const price = sanitizeNumericConfigValue("mechanicalManualCost", input?.value ?? state.config.mechanicalManualCost);
+    if (!window.confirm(`Usar este coste mecanico manual (${formatCurrency(price)})?`)) return;
+    state.config.mechanicalCostMode = "Manual";
+    state.config.mechanicalManualCost = price;
+    markBomPending();
+    persistLocalState();
+    render();
+  });
   document.querySelectorAll("[data-option-group]").forEach((input) => {
     input.addEventListener("change", () => {
       const group = input.dataset.optionGroup;
@@ -564,10 +577,10 @@ function resetConfigurationForModel() {
 function handleConfigChange(event) {
   const key = event.currentTarget.dataset.config;
   if (!key) return;
-  if (key === "tftManualPrice") {
+  if (key === "tftManualPrice" || key === "mechanicalManualCost") {
     const value = normalizeManualPriceInput(event.currentTarget.value);
     event.currentTarget.value = value;
-    state.config.tftManualPrice = value;
+    state.config[key] = value;
     return;
   }
   const value = key in numericConfigLimits ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
