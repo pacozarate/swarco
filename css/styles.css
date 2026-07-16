@@ -906,6 +906,19 @@ tr:last-child td {
   font-variant-numeric: tabular-nums;
 }
 
+.data-table tfoot td {
+  background: #e8eef5;
+  border: 1px solid #8091a6;
+  font-weight: 900;
+}
+
+.annul-cell {
+  color: #e00000;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 900;
+}
+
 .row-action-button {
   min-height: 26px;
   padding: 4px 9px;

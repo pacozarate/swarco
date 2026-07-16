@@ -1,4 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-25";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-26";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-26";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -392,26 +393,213 @@ function tftHistoryKey(row) {
 }
 
 function modulesTab(state) {
+  const selectedModules = selectedModuleRows(state);
+  const moduleSummary = selectedModules.filter((row) => String(row.group) !== "6").map((row) => moduleSummaryRow(row, state));
+  const excRows = excReferenceRows(state, selectedModules);
   return `
-    <div class="technical-grid">
-      <article class="tech-card">
-        <header class="tech-card-header green">Modulos y auxiliares</header>
-        <div class="tech-card-body form-grid">
-          ${auxiliaries(state)}
-        </div>
-      </article>
-      <article class="tech-card">
-        <header class="tech-card-header dark">Precio TFT</header>
-        <div class="tech-card-body form-grid">
-          ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"])}
-          ${moneyNumberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
-          ${selectRow("Precio Fijo", "tftPriceMode", state.config.tftPriceMode, ["Precio Fijo", "Modificar Precio"])}
-          ${selectRow("Sumar SetUp", "tftSetup", state.config.tftSetup, ["SET UP", "NO"])}
-          ${selectRow("Margen", "tftMarginMode", state.config.tftMarginMode, ["Sin Margen", "Modificar Margenes"])}
-        </div>
-      </article>
+    <article class="tech-card">
+      <header class="tech-card-header">A Modulos seleccionados</header>
+      <div class="tech-card-body">
+        ${moduleSummaryTable(moduleSummary)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header green">B Auxiliares</header>
+      <div class="tech-card-body form-grid">
+        ${auxiliaries(state)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header orange">C Referencias EXC</header>
+      <div class="tech-card-body">
+        ${excReferencesTable(excRows)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header dark">Precio TFT</header>
+      <div class="tech-card-body form-grid">
+        ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"])}
+        ${moneyNumberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
+        ${selectRow("Precio Fijo", "tftPriceMode", state.config.tftPriceMode, ["Precio Fijo", "Modificar Precio"])}
+        ${selectRow("Sumar SetUp", "tftSetup", state.config.tftSetup, ["SET UP", "NO"])}
+        ${selectRow("Margen", "tftMarginMode", state.config.tftMarginMode, ["Sin Margen", "Modificar Margenes"])}
+      </div>
+    </article>
+  `;
+}
+
+function selectedModuleRows(state) {
+  const rows = [];
+  Object.entries(state.config.options || {}).forEach(([group, value]) => {
+    const codes = Array.isArray(value) ? value : [value];
+    codes.filter(Boolean).forEach((code) => {
+      const row = state.modelRows.find((item) => String(item.group).toUpperCase() === String(group).toUpperCase() && item.code === code);
+      if (row) rows.push(row);
+    });
+  });
+  return rows;
+}
+
+function moduleSummaryTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">No hay modulos seleccionados.</div>`;
+  const totals = rows.reduce((sum, row) => ({
+    noMec: sum.noMec + row.noMec,
+    mec: sum.mec + row.mec,
+    glass: sum.glass + row.glass,
+    subtotal: sum.subtotal + row.subtotal,
+    tft: sum.tft + row.tft,
+    total: sum.total + row.total
+  }), { noMec: 0, mec: 0, glass: 0, subtotal: 0, tft: 0, total: 0 });
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>Vidrio</th><th>Subtotal</th><th>TFT</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.group}</td>
+              <td>${row.code}</td>
+              <td>${row.description || row.longDescription || "-"}</td>
+              <td class="numeric">${formatQuantity(row.quantity)}</td>
+              <td class="numeric">${formatCurrency(row.noMec)}</td>
+              <td class="numeric">${formatCurrency(row.mec)}</td>
+              <td class="numeric">${formatCurrency(row.glass)}</td>
+              <td class="numeric">${formatCurrency(row.subtotal)}</td>
+              <td class="numeric">${row.tft ? formatCurrency(row.tft) : "-"}</td>
+              <td class="numeric">${formatCurrency(row.total)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4">TOTAL</td><td class="numeric">${formatCurrency(totals.noMec)}</td><td class="numeric">${formatCurrency(totals.mec)}</td><td class="numeric">${formatCurrency(totals.glass)}</td><td class="numeric">${formatCurrency(totals.subtotal)}</td><td class="numeric">${totals.tft ? formatCurrency(totals.tft) : "-"}</td><td class="numeric">${formatCurrency(totals.total)}</td></tr>
+        </tfoot>
+      </table>
     </div>
   `;
+}
+
+function moduleSummaryRow(moduleRow, state) {
+  const rows = explodeModule(moduleRow.root || moduleRow.code, state);
+  const summary = rows.reduce((sum, row) => {
+    const cost = rowCost(row.article, state.tables) * Number(row.quantity || 0);
+    const bucket = costBucket(row.article, state.tables);
+    sum[bucket] += cost;
+    return sum;
+  }, { noMec: 0, mec: 0, glass: 0 });
+  const subtotal = summary.noMec + summary.mec + summary.glass;
+  return {
+    group: moduleRow.group,
+    code: moduleRow.code,
+    description: moduleRow.description,
+    quantity: 1,
+    noMec: summary.noMec,
+    mec: summary.mec,
+    glass: summary.glass,
+    subtotal,
+    tft: 0,
+    total: subtotal
+  };
+}
+
+function excReferenceRows(state, selectedModules) {
+  const rows = selectedModules.flatMap((moduleRow) => explodeModule(moduleRow.root || moduleRow.code, state)
+    .filter((row) => isExcReference(row.article, state.tables))
+    .map((row) => {
+      const unitCost = rowCost(row.article, state.tables);
+      return {
+        group: moduleRow.group,
+        code: row.article,
+        description: articleDescription(row.article, state.tables),
+        quantity: Number(row.quantity || 0),
+        unitCost,
+        total: unitCost * Number(row.quantity || 0)
+      };
+    }));
+  return consolidateExcRows(rows);
+}
+
+function excReferencesTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">NO</div>`;
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>Precio</th><th>Total</th><th>Anular</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.group}</td>
+              <td>${row.code}</td>
+              <td>${row.description || "-"}</td>
+              <td class="numeric">${formatQuantity(row.quantity)}</td>
+              <td class="numeric">${formatCurrency(row.unitCost)}</td>
+              <td class="numeric">${formatCurrency(row.total)}</td>
+              <td class="annul-cell">X</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function explodeModule(root, state) {
+  if (!root) return [];
+  return explodeBom({ roots: [root], cplismatRows: state.tables.cplismat || [], maxLevel: 6 });
+}
+
+function consolidateExcRows(rows) {
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const key = `${row.group}|${row.code}|${row.unitCost}`;
+    const current = grouped.get(key) || { ...row, quantity: 0, total: 0 };
+    current.quantity += row.quantity;
+    current.total += row.total;
+    grouped.set(key, current);
+  });
+  return [...grouped.values()].sort((a, b) => naturalCompare(a.group, b.group) || naturalCompare(a.code, b.code));
+}
+
+function isExcReference(code, tables) {
+  const upperCode = String(code || "").toUpperCase();
+  const article = articleDv(code, tables);
+  return String(article?.dva17 || "").trim().toUpperCase() === "EXC" && !upperCode.includes("AV");
+}
+
+function costBucket(code, tables) {
+  const upperCode = String(code || "").toUpperCase();
+  if (upperCode.includes("AV")) return "glass";
+  const dv = articleDv(code, tables);
+  if (String(dv?.dva17 || "").trim().toUpperCase() === "MEC" || /AM\d+/.test(upperCode)) return "mec";
+  return "noMec";
+}
+
+function rowCost(code, tables) {
+  const tariff = (tables.gcesp || [])
+    .filter((row) => row.code === code && Number(row.price) > 0)
+    .sort((a, b) => compareDateDesc(a.validFrom, b.validFrom))[0];
+  if (tariff) return Number(tariff.price) || 0;
+  const history = (tables.alhis || [])
+    .filter((row) => row.code === code && Number(row.quantity || 0) > 0 && Number(row.price || row.realCost || row.averageCost || 0) > 0)
+    .sort((a, b) => compareDateDesc(a.date, b.date))[0];
+  if (history) return Number(history.realCost || history.averageCost || history.price || 0) || 0;
+  return Number((tables.alart || []).find((row) => row.code === code)?.pmp || 0) || 0;
+}
+
+function articleDescription(code, tables) {
+  return (tables.alart || []).find((row) => row.code === code)?.description
+    || (tables.gcesp || []).find((row) => row.code === code)?.description
+    || "";
+}
+
+function articleDv(code, tables) {
+  return (tables.alartdv || []).find((row) => row.code === code) || {};
 }
 
 function groupSelect(group, state) {
