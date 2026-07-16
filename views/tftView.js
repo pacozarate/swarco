@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-11";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-12";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -165,6 +165,7 @@ function tftsTab(state) {
   const details = state.tftDetails;
   const tftOptions = state.filteredTfts;
   const tftOfferRows = tftOffers(state, tftOptions);
+  const tftHistoryRows = tftHistory(state, tftOptions);
   const dimensions = state.tftDimensions || {};
   return `
     <div class="technical-grid">
@@ -228,6 +229,13 @@ function tftsTab(state) {
         ${tftOffersTable(tftOfferRows)}
       </div>
     </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header dark">Movimientos TFT - ALHIS</header>
+      <div class="tech-card-body">
+        ${tftHistoryTable(tftHistoryRows)}
+      </div>
+    </article>
   `;
 }
 
@@ -254,6 +262,38 @@ function tftOffersTable(rows) {
               <td class="numeric">${formatPrice(row.price)}</td>
               <td>${row.validFrom || "-"}</td>
               <td>${row.validTo || "-"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function tftHistory(state, tftOptions) {
+  const visibleCodes = new Set(tftOptions.map((row) => row.code).filter(Boolean));
+  return (state.tables.alhis || [])
+    .filter((row) => visibleCodes.has(row.code))
+    .sort((a, b) => naturalCompare(a.code, b.code) || compareDateDesc(a.date, b.date));
+}
+
+function tftHistoryTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">No hay movimientos ALHIS para las referencias TFT visibles.</div>`;
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>Codigo</th><th>Fecha</th><th>Cant.</th><th>Precio</th><th>Precio medio</th><th>Proveedor</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.code || "-"}</td>
+              <td>${row.date || "-"}</td>
+              <td class="numeric">${formatQuantity(row.quantity)}</td>
+              <td class="numeric">${formatPrice(row.price)}</td>
+              <td class="numeric">${formatPrice(row.averageCost || row.realCost)}</td>
+              <td>${row.supplier || "-"}</td>
             </tr>
           `).join("")}
         </tbody>
