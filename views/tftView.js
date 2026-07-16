@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-14";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-15";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -273,7 +273,7 @@ function tftOffersTable(rows) {
 function tftHistory(state, tftOptions) {
   const visibleCodes = new Set(tftOptions.map((row) => row.code).filter(Boolean));
   return (state.tables.alhis || [])
-    .filter((row) => visibleCodes.has(row.code) && Number(row.quantity || 0) > 0 && hasPurchaseSupplier(row))
+    .filter((row) => visibleCodes.has(row.code) && Number(row.quantity || 0) > 0 && Number(row.price || 0) > 0 && hasPurchaseSupplier(row))
     .sort((a, b) => compareDateDesc(a.date, b.date) || naturalCompare(a.code, b.code));
 }
 
@@ -290,7 +290,7 @@ function tftHistoryTable(rows) {
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>codart</th><th>fecmov</th><th>cantidad</th><th>precio compra</th><th>proveedor</th><th>fecha caducidad</th></tr>
+          <tr><th>codigo</th><th>fecha</th><th>cantidad</th><th>precio compra</th><th>proveedor</th><th>fecha caducidad</th></tr>
         </thead>
         <tbody>
           ${rows.map((row) => `
