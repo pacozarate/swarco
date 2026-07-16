@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-28";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-28";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-29";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-29";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -394,10 +394,12 @@ function tftHistoryKey(row) {
 
 function modulesTab(state) {
   const selectedModules = selectedModuleRows(state);
+  const excRows = excReferenceRows(state, selectedModules);
+  const excDeductions = excDeductionByGroup(excRows, state);
   const moduleSummary = selectedModules.filter((row) => String(row.group) !== "6").map((row) => moduleSummaryRow(row, state));
   const auxiliarySummary = auxiliarySummaryRow(state);
   if (auxiliarySummary) moduleSummary.push(auxiliarySummary);
-  const excRows = excReferenceRows(state, selectedModules);
+  applyExcDeductions(moduleSummary, excDeductions);
   return `
     <article class="tech-card">
       <header class="tech-card-header">A Modulos seleccionados</header>
@@ -466,7 +468,7 @@ function moduleSummaryTable(rows) {
             <tr>
               <td>${row.group}</td>
               <td>${row.code}</td>
-              <td>${row.description || row.longDescription || "-"}</td>
+              <td>${row.description || row.longDescription || "-"}${row.excDeduction ? ` <span class="inline-deduction">EXC -${formatCurrency(row.excDeduction)}</span>` : ""}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${formatCurrency(row.noMec)}</td>
               <td class="numeric">${formatCurrency(row.mec)}</td>
@@ -483,6 +485,17 @@ function moduleSummaryTable(rows) {
       </table>
     </div>
   `;
+}
+
+function applyExcDeductions(rows, deductions) {
+  rows.forEach((row) => {
+    const deduction = deductions.get(String(row.group)) || 0;
+    if (!deduction) return;
+    row.noMec = Math.max(0, row.noMec - deduction);
+    row.subtotal = Math.max(0, row.subtotal - deduction);
+    row.total = Math.max(0, row.total - deduction);
+    row.excDeduction = deduction;
+  });
 }
 
 function moduleSummaryRow(moduleRow, state) {
@@ -563,15 +576,17 @@ function excReferencesTable(rows, state) {
         <tbody>
           ${rows.map((row) => {
             const key = excReferenceKey(row);
+            const selected = annulled.has(key);
+            const strikeClass = selected ? "strike-value" : "";
             return `
-            <tr class="${annulled.has(key) ? "selected" : ""}">
+            <tr class="${selected ? "selected" : ""}">
               <td>${row.group}</td>
               <td>${row.code}</td>
               <td>${row.description || "-"}</td>
-              <td class="numeric">${formatQuantity(row.quantity)}</td>
-              <td class="numeric">${formatCurrency(row.unitCost)}</td>
-              <td class="numeric">${formatCurrency(row.total)}</td>
-              <td class="annul-cell"><input type="checkbox" data-exc-annul value="${escapeAttr(key)}" ${annulled.has(key) ? "checked" : ""} /></td>
+              <td class="numeric ${strikeClass}">${formatQuantity(row.quantity)}</td>
+              <td class="numeric ${strikeClass}">${formatCurrency(row.unitCost)}</td>
+              <td class="numeric ${strikeClass}">${formatCurrency(row.total)}</td>
+              <td class="annul-cell"><input type="checkbox" data-exc-annul value="${escapeAttr(key)}" ${selected ? "checked" : ""} /></td>
             </tr>
           `;
           }).join("")}
@@ -583,6 +598,17 @@ function excReferencesTable(rows, state) {
 
 function excReferenceKey(row) {
   return [row.group, row.code, row.unitCost].map((value) => String(value ?? "")).join("|");
+}
+
+function excDeductionByGroup(rows, state) {
+  const annulled = new Set(state.config.excAnnulledRefs || []);
+  const deductions = new Map();
+  rows.forEach((row) => {
+    if (!annulled.has(excReferenceKey(row))) return;
+    const group = String(row.group);
+    deductions.set(group, (deductions.get(group) || 0) + Number(row.total || 0));
+  });
+  return deductions;
 }
 
 function auxiliariesTable(state) {
