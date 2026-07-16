@@ -3,6 +3,7 @@ const aliases = {
     code: ["code", "codigo", "articulo", "codart", "cod"],
     description: ["description", "descripcion", "descrip", "nombre", "descri1", "des"],
     pmp: ["pmp", "precio", "precio_medio", "precio medio ponderado", "pmedpon", "pultcomp", "pcoste", "coste"],
+    pultcomp: ["pultcomp", "precio_ultima_compra", "precio ultima compra"],
     type: ["type", "tipo", "tipo_articulo", "clase", "tipart", "tigte"]
   },
   alartdv: {
@@ -143,7 +144,7 @@ function normalizeRow(tableName, row) {
     });
   }
   if (["alart", "gcesp", "alhis", "ct_led", "mecanica"].includes(tableName)) {
-    ["pmp", "price", "realCost", "faCurrent", "faVoltage", "basePrice", "pricePerMm2", "setup"].forEach((field) => {
+    ["pmp", "pultcomp", "price", "realCost", "faCurrent", "faVoltage", "basePrice", "pricePerMm2", "setup"].forEach((field) => {
       if (result[field] !== undefined) result[field] = toNumber(result[field], 0);
     });
   }

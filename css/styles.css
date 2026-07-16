@@ -763,6 +763,11 @@ tr:last-child td {
   font-weight: 900;
 }
 
+.compact-select {
+  min-height: 28px;
+  padding: 3px 6px;
+}
+
 .money-input-wrap {
   position: relative;
   display: grid;

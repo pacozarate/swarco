@@ -54,6 +54,7 @@ def import_alart() -> list[dict[str, Any]]:
             "code": code(row.get("codart")),
             "description": text(row.get("descri1")),
             "pmp": number(row.get("pmedpon")),
+            "pultcomp": number(row.get("pultcomp")),
             "type": text(row.get("tipart") or row.get("tigte")),
         }
         for row in rows
