@@ -1,4 +1,4 @@
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-7";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-8";
 
 const materialDensities = {
   GALVA: 7850,

@@ -42,5 +42,12 @@ function latestTariff(article, rows) {
 }
 
 function latestHistory(article, rows) {
-  return rows.filter((row) => row.code === article && Number(row.realCost) > 0).sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  const row = rows
+    .filter((item) => item.code === article && historyCost(item) > 0)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  return row ? { ...row, realCost: historyCost(row) } : undefined;
+}
+
+function historyCost(row) {
+  return Number(row.realCost || row.averageCost || row.price || 0);
 }

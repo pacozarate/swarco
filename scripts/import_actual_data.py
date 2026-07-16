@@ -22,7 +22,7 @@ def main() -> None:
     write_json(ROOT / "data/alartdv.json", import_alartdv())
     write_json(ROOT / "data/cplismat.json", import_cplismat(alart_rows))
     write_json(ROOT / "data/gcesp.json", import_gcesp())
-    write_json(ROOT / "data/alhis.json", import_alhis_latest())
+    write_json(ROOT / "data/alhis.json", import_alhis())
     write_json(ROOT / "data/ct_tft.json", import_ct_tft())
     write_json(ROOT / "data/ct_led.json", import_ct_led())
     write_json(ROOT / "data/trl/pn-demo-trl.json", import_trl())
@@ -119,25 +119,24 @@ def import_gcesp() -> list[dict[str, Any]]:
     ]
 
 
-def import_alhis_latest() -> list[dict[str, Any]]:
-    latest: dict[str, dict[str, Any]] = {}
+def import_alhis() -> list[dict[str, Any]]:
+    output = []
     for row in sheet_dicts(SOURCE_DIR / "dbo_alhis.xlsx", "dbo_alhis"):
         article_code = code(row.get("codart"))
-        if not article_code:
+        if not article_code or text(row.get("moves")) != "E":
             continue
-        real_cost = number(row.get("premedpon") or row.get("pmedpon") or row.get("prec"))
-        if real_cost <= 0:
-            continue
-        current_date = row.get("fecmov") or row.get("fecintro")
-        previous = latest.get(article_code)
-        if previous is None or comparable_date(current_date) >= comparable_date(previous.get("_rawDate")):
-            latest[article_code] = {
-                "code": article_code,
-                "realCost": real_cost,
-                "date": date_value(current_date),
-                "_rawDate": current_date,
-            }
-    return [{k: v for k, v in row.items() if k != "_rawDate"} for row in latest.values()]
+        output.append({
+            "code": article_code,
+            "date": date_value(row.get("fecmov")),
+            "quantity": number(row.get("cant")),
+            "price": number(row.get("prec")),
+            "movement": text(row.get("moves")),
+            "supplier": value(row.get("clprfab")),
+            "expiration": date_value(row.get("feccad")),
+            "averageCost": number(row.get("premedpon")),
+            "realCost": number(row.get("premedpon") or row.get("prec")),
+        })
+    return output
 
 
 def import_ct_tft() -> list[dict[str, Any]]:

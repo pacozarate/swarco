@@ -31,7 +31,13 @@ const aliases = {
   alhis: {
     code: ["code", "codigo", "articulo", "codart"],
     realCost: ["realcost", "coste_real", "coste", "precio", "prec", "pmedpon", "premedpon"],
-    date: ["date", "fecha", "fecmov", "fecintro"]
+    date: ["date", "fecha", "fecmov", "fecintro"],
+    quantity: ["quantity", "cantidad", "cant"],
+    price: ["price", "precio", "prec"],
+    movement: ["movement", "moves"],
+    supplier: ["supplier", "proveedor", "clprfab"],
+    expiration: ["expiration", "feccad"],
+    averageCost: ["averagecost", "premedpon"]
   },
   ct_tft: {
     code: ["code", "codigo", "articulo", "codart", "tft", "referencia_swarco"],
