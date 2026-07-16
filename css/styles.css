@@ -881,6 +881,28 @@ tr:last-child td {
   font-variant-numeric: tabular-nums;
 }
 
+.row-action-button {
+  min-height: 26px;
+  padding: 4px 9px;
+  color: var(--brand);
+  background: #ffffff;
+  border: 1px solid var(--brand);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.row-action-button.active {
+  color: #ffffff;
+  background: var(--brand);
+}
+
+.price-selection-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
 .image-placeholder.compact {
   min-height: 72px;
   padding: 12px;

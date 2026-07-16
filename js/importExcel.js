@@ -1,5 +1,5 @@
-import { normalizeRows } from "./normalizers.js?v=20260716-v4-1-21";
-import { makeVersion } from "./versioningEngine.js?v=20260716-v4-1-21";
+import { normalizeRows } from "./normalizers.js?v=20260716-v4-1-22";
+import { makeVersion } from "./versioningEngine.js?v=20260716-v4-1-22";
 
 export const tableDefinitions = [
   { key: "alart", label: "ALART" },

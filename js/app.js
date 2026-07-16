@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-21";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-21";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-21";
-import { validateTables } from "./validators.js?v=20260716-v4-1-21";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-21";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-21";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-21";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-21";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-21";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-21";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-21";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-21";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-21";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-21";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-21";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-21";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-21";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-21";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-21";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-21";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-21";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-21";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-21";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-21";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-22";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-22";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-22";
+import { validateTables } from "./validators.js?v=20260716-v4-1-22";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-22";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-22";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-22";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-22";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-22";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-22";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-22";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-22";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-22";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-22";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-22";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-22";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-22";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-22";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-22";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-22";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-22";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-22";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-22";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-22";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.21";
-const appBuild = "20260716-v4-1-21";
+const appVersion = "4.1.22";
+const appBuild = "20260716-v4-1-22";
 
 app.innerHTML = `
   <section class="screen">
@@ -88,8 +88,13 @@ const state = {
     tftPriceMode: "Precio Fijo",
     tftMarginMode: "Sin Margen",
     tftSetup: "SET UP",
-    tftSelectionMode: "Selección",
+    tftSelectionMode: "Seleccionado",
     tftManualPrice: 0,
+    tftSelectedPriceSource: "",
+    tftSelectedPriceKey: "",
+    tftSelectedPrice: 0,
+    tftSelectedPriceCode: "",
+    tftSelectedPriceLabel: "",
     tftClockPosition: "",
     tftSizeInches: "",
     tftMechanicalWidthMm: 700,
@@ -135,7 +140,7 @@ const numericConfigLimits = {
   ledManualHeightMm: { min: 1, max: 10000 },
   ledQuantity: { min: 1, max: 9999 },
   tftQuantity: { min: 1, max: 9999 },
-  tftManualPrice: { min: 0, max: 999999 },
+  tftManualPrice: { min: 0, max: 999999.99 },
   tftMechanicalWidthMm: { min: 1, max: 10000 },
   tftMechanicalHeightMm: { min: 1, max: 10000 },
   tftSheetThicknessMm: { min: 1, max: 5 }
@@ -403,6 +408,7 @@ function bindEvents(viewState) {
   });
   document.querySelector("#tftSelect")?.addEventListener("change", (event) => {
     state.config.tftCode = event.target.value;
+    clearTftSelectedPrice();
     markBomPending();
     persistLocalState();
     render();
@@ -416,6 +422,22 @@ function bindEvents(viewState) {
   document.querySelectorAll("[data-config]").forEach((control) => {
     control.addEventListener("input", handleConfigChange);
     control.addEventListener("change", handleConfigChange);
+  });
+  document.querySelectorAll("[data-tft-price-select]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const price = sanitizeNumericConfigValue("tftManualPrice", button.dataset.price);
+      const label = button.dataset.label || "";
+      if (!window.confirm(`Usar este precio TFT (${formatCurrency(price)}) de ${label}?`)) return;
+      state.config.tftSelectionMode = "Seleccionado";
+      state.config.tftSelectedPriceSource = button.dataset.source || "";
+      state.config.tftSelectedPriceKey = button.dataset.key || "";
+      state.config.tftSelectedPrice = price;
+      state.config.tftSelectedPriceCode = button.dataset.code || "";
+      state.config.tftSelectedPriceLabel = label;
+      markBomPending();
+      persistLocalState();
+      render();
+    });
   });
   document.querySelectorAll("[data-option-group]").forEach((input) => {
     input.addEventListener("change", () => {
@@ -467,6 +489,7 @@ function resetConfigurationForModel() {
   state.config.tftResolution = "";
   state.config.tftTempRange = "";
   state.config.tftManufacturer = "";
+  clearTftSelectedPrice();
   if (currentModel?.technology === "TFT" && baseDimensions) {
     state.config.tftMechanicalWidthMm = baseDimensions.totalWidthMm;
     state.config.tftMechanicalHeightMm = baseDimensions.totalHeightMm;
@@ -481,11 +504,33 @@ function handleConfigChange(event) {
   const key = event.currentTarget.dataset.config;
   if (!key) return;
   const value = event.currentTarget.type === "number" ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
-  state.config[key] = value;
-  if (key === "tftSizeMode" || key === "tftSizeInches" || key.startsWith("tft")) syncTftSelection();
+  state.config[key] = key === "tftSelectionMode" && value === "Selección" ? "Seleccionado" : value;
+  if (tftFilterConfigKeys.has(key)) {
+    syncTftSelection();
+    clearTftSelectedPrice();
+  }
   if (key.startsWith("tft") || key.startsWith("led") || ["widthMm", "heightMm"].includes(key)) markBomPending();
   persistLocalState();
   render();
+}
+
+const tftFilterConfigKeys = new Set([
+  "tftCode",
+  "tftSizeMode",
+  "tftSizeInches",
+  "tftAspectRatio",
+  "tftBrightness",
+  "tftResolution",
+  "tftTempRange",
+  "tftManufacturer"
+]);
+
+function clearTftSelectedPrice() {
+  state.config.tftSelectedPriceSource = "";
+  state.config.tftSelectedPriceKey = "";
+  state.config.tftSelectedPrice = 0;
+  state.config.tftSelectedPriceCode = "";
+  state.config.tftSelectedPriceLabel = "";
 }
 
 function syncTftSelection() {
@@ -599,6 +644,7 @@ function restoreLocalState() {
     state.ledTab = ["mecanica", "led"].includes(saved.ledTab) ? saved.ledTab : "mecanica";
     const defaultConfig = { ...state.config };
     state.config = { ...state.config, ...(saved.config || {}) };
+    if (state.config.tftSelectionMode === "Selección") state.config.tftSelectionMode = "Seleccionado";
     sanitizeConfig(defaultConfig);
     state.formulas = mergeFormulas(saved.formulas || {});
     state.bom = { ...state.bom, ...(saved.bom || {}), exploded: [], consolidated: [] };
@@ -621,6 +667,10 @@ function sanitizeNumericConfigValue(key, value, fallback) {
   if (!limits) return number;
   if (number < limits.min || number > limits.max) return fallback ?? Math.min(limits.max, Math.max(limits.min, number));
   return number;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0);
 }
 
 function buildCalculatedFields({ mechanics, ledCalculation, costing, currentModel }) {

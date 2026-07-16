@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-21";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-22";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -201,6 +201,7 @@ function tftsTab(state) {
             ${readRow("Reloj", clockSummary(state), "calculated")}
             ${readRow("Posicion reloj", clockPositionSummary(state), "locked")}
           </div>
+          ${tftPriceSelectionPanel(state, tftOfferRows, tftHistoryRows)}
         </div>
       </article>
     </div>
@@ -226,14 +227,14 @@ function tftsTab(state) {
     <article class="tech-card">
       <header class="tech-card-header green">Ofertas TFT - GCESP</header>
       <div class="tech-card-body">
-        ${tftOffersTable(tftOfferRows)}
+        ${tftOffersTable(tftOfferRows, state)}
       </div>
     </article>
 
     <article class="tech-card">
       <header class="tech-card-header dark">Historico de compras - ALHIS</header>
       <div class="tech-card-body">
-        ${tftHistoryTable(tftHistoryRows)}
+        ${tftHistoryTable(tftHistoryRows, state)}
       </div>
     </article>
   `;
@@ -246,17 +247,22 @@ function tftOffers(state, tftOptions) {
     .sort((a, b) => naturalCompare(a.code, b.code) || compareDateDesc(a.validFrom, b.validFrom) || Number(a.batch || 0) - Number(b.batch || 0));
 }
 
-function tftOffersTable(rows) {
+function tftOffersTable(rows, state) {
   if (!rows.length) return `<div class="image-placeholder compact">No hay ofertas GCESP para las referencias TFT visibles.</div>`;
+  const showSelection = isSelectedTftPriceMode(state);
   return `
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>Codigo</th><th>Lote</th><th>Precio</th><th>Proveedor</th><th>Fvdesde</th><th>Fvhasta</th></tr>
+          <tr>${showSelection ? "<th>Seleccion</th>" : ""}<th>Codigo</th><th>Lote</th><th>Precio</th><th>Proveedor</th><th>Fvdesde</th><th>Fvhasta</th></tr>
         </thead>
         <tbody>
-          ${rows.map((row) => `
-            <tr>
+          ${rows.map((row) => {
+            const key = tftOfferKey(row);
+            const selected = isSelectedTftPrice(state, "GCESP", key);
+            return `
+            <tr class="${selected ? "selected" : ""}">
+              ${showSelection ? `<td>${priceSelectButton("GCESP", key, row.code, row.price, `Oferta ${row.code} lote ${row.batch ?? "-"}` , selected)}</td>` : ""}
               <td>${row.code || "-"}</td>
               <td class="numeric">${row.batch ?? "-"}</td>
               <td class="numeric">${formatPrice(row.price)}</td>
@@ -264,7 +270,8 @@ function tftOffersTable(rows) {
               <td>${row.validFrom || "-"}</td>
               <td>${row.validTo || "-"}</td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     </div>
@@ -285,17 +292,22 @@ function hasPurchaseSupplier(row) {
   return normalized !== "" && normalized !== "-" && Number(normalized) !== 0;
 }
 
-function tftHistoryTable(rows) {
+function tftHistoryTable(rows, state) {
   if (!rows.length) return `<div class="image-placeholder compact">No hay movimientos ALHIS para las referencias TFT visibles.</div>`;
+  const showSelection = isSelectedTftPriceMode(state);
   return `
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>codigo</th><th>fecha</th><th>cantidad</th><th>precio compra</th><th>proveedor</th><th>fecha caducidad</th></tr>
+          <tr>${showSelection ? "<th>Seleccion</th>" : ""}<th>codigo</th><th>fecha</th><th>cantidad</th><th>precio compra</th><th>proveedor</th><th>fecha caducidad</th></tr>
         </thead>
         <tbody>
-          ${rows.map((row) => `
-            <tr>
+          ${rows.map((row) => {
+            const key = tftHistoryKey(row);
+            const selected = isSelectedTftPrice(state, "ALHIS", key);
+            return `
+            <tr class="${selected ? "selected" : ""}">
+              ${showSelection ? `<td>${priceSelectButton("ALHIS", key, row.code, row.price, `Compra ${row.code} ${row.date || "-"}` , selected)}</td>` : ""}
               <td>${row.code || "-"}</td>
               <td>${row.date || "-"}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
@@ -303,11 +315,80 @@ function tftHistoryTable(rows) {
               <td>${row.supplier || "-"}</td>
               <td>${row.expiration || "-"}</td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     </div>
   `;
+}
+
+function tftPriceSelectionPanel(state, offerRows, historyRows) {
+  const selected = resolveSelectedTftPrice(state, offerRows, historyRows);
+  const manualMode = state.config.tftSelectionMode === "Manual";
+  return `
+    <div class="price-selection-panel">
+      <div class="form-grid detail-readonly-grid">
+        ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"], undefined, undefined, "critical")}
+        ${manualMode ? numberRow("Importe manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical") : readRow("Importe seleccionado", selected.priceLabel, selected.tone)}
+        ${readRow("Origen precio", selected.sourceLabel, selected.tone)}
+        ${readRow("Referencia precio", selected.referenceLabel, selected.tone)}
+      </div>
+    </div>
+  `;
+}
+
+function resolveSelectedTftPrice(state, offerRows, historyRows) {
+  if (state.config.tftSelectionMode === "Manual") {
+    return {
+      priceLabel: formatCurrency(state.config.tftManualPrice),
+      sourceLabel: "Manual",
+      referenceLabel: state.config.tftCode || "-",
+      tone: "calculated critical"
+    };
+  }
+  const source = state.config.tftSelectedPriceSource;
+  const key = state.config.tftSelectedPriceKey;
+  const rows = source === "GCESP" ? offerRows : historyRows;
+  const row = rows.find((item) => (source === "GCESP" ? tftOfferKey(item) : tftHistoryKey(item)) === key);
+  if (!row) {
+    return {
+      priceLabel: "-",
+      sourceLabel: "Pendiente de seleccion",
+      referenceLabel: "Use un registro de ofertas o historico",
+      tone: "locked"
+    };
+  }
+  return {
+    priceLabel: formatCurrency(row.price),
+    sourceLabel: source === "GCESP" ? "Oferta proveedor" : "Compra historica",
+    referenceLabel: source === "GCESP" ? `${row.code} lote ${row.batch ?? "-"}` : `${row.code} ${row.date || "-"}`,
+    tone: "calculated critical"
+  };
+}
+
+function isSelectedTftPriceMode(state) {
+  return state.config.tftSelectionMode !== "Manual";
+}
+
+function isSelectedTftPrice(state, source, key) {
+  return state.config.tftSelectedPriceSource === source && state.config.tftSelectedPriceKey === key;
+}
+
+function priceSelectButton(source, key, code, price, label, selected) {
+  return `
+    <button type="button" class="row-action-button ${selected ? "active" : ""}" data-tft-price-select data-source="${source}" data-key="${escapeAttr(key)}" data-code="${escapeAttr(code || "")}" data-price="${Number(price) || 0}" data-label="${escapeAttr(label)}">
+      ${selected ? "Elegido" : "Usar"}
+    </button>
+  `;
+}
+
+function tftOfferKey(row) {
+  return [row.code, row.batch, row.price, row.supplier, row.validFrom, row.validTo].map((value) => String(value ?? "")).join("|");
+}
+
+function tftHistoryKey(row) {
+  return [row.code, row.date, row.quantity, row.price, row.supplier, row.expiration].map((value) => String(value ?? "")).join("|");
 }
 
 function modulesTab(state) {
@@ -322,8 +403,8 @@ function modulesTab(state) {
       <article class="tech-card">
         <header class="tech-card-header dark">Precio TFT</header>
         <div class="tech-card-body form-grid">
-          ${selectRow("Precio", "tftSelectionMode", state.config.tftSelectionMode, ["Selección", "Manual"])}
-          ${numberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999, 1, "critical")}
+          ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"])}
+          ${numberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
           ${selectRow("Precio Fijo", "tftPriceMode", state.config.tftPriceMode, ["Precio Fijo", "Modificar Precio"])}
           ${selectRow("Sumar SetUp", "tftSetup", state.config.tftSetup, ["SET UP", "NO"])}
           ${selectRow("Margen", "tftMarginMode", state.config.tftMarginMode, ["Sin Margen", "Modificar Margenes"])}
@@ -467,6 +548,20 @@ function formatPrice(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
   return new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(number);
+}
+
+function formatCurrency(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
+}
+
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function compareDateDesc(left, right) {
