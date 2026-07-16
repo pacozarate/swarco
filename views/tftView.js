@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-27";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-27";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-28";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-28";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -416,7 +416,7 @@ function modulesTab(state) {
     <article class="tech-card">
       <header class="tech-card-header orange">C Referencias EXC</header>
       <div class="tech-card-body">
-        ${excReferencesTable(excRows)}
+        ${excReferencesTable(excRows, state)}
       </div>
     </article>
 
@@ -551,8 +551,9 @@ function excReferenceRows(state, selectedModules) {
   return consolidateExcRows(rows);
 }
 
-function excReferencesTable(rows) {
+function excReferencesTable(rows, state) {
   if (!rows.length) return `<div class="image-placeholder compact">NO</div>`;
+  const annulled = new Set(state.config.excAnnulledRefs || []);
   return `
     <div class="data-table-wrapper">
       <table class="data-table compact">
@@ -560,21 +561,28 @@ function excReferencesTable(rows) {
           <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>Precio</th><th>Total</th><th>Anular</th></tr>
         </thead>
         <tbody>
-          ${rows.map((row) => `
-            <tr>
+          ${rows.map((row) => {
+            const key = excReferenceKey(row);
+            return `
+            <tr class="${annulled.has(key) ? "selected" : ""}">
               <td>${row.group}</td>
               <td>${row.code}</td>
               <td>${row.description || "-"}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${formatCurrency(row.unitCost)}</td>
               <td class="numeric">${formatCurrency(row.total)}</td>
-              <td class="annul-cell">X</td>
+              <td class="annul-cell"><input type="checkbox" data-exc-annul value="${escapeAttr(key)}" ${annulled.has(key) ? "checked" : ""} /></td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     </div>
   `;
+}
+
+function excReferenceKey(row) {
+  return [row.group, row.code, row.unitCost].map((value) => String(value ?? "")).join("|");
 }
 
 function auxiliariesTable(state) {
