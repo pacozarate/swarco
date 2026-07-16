@@ -143,6 +143,7 @@ def import_gcesp(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
             "code": code(row.get("codart")),
             "description": text(row.get("des")),
             "price": number(row.get("pre")),
+            "supplier": value(row.get("codpro")),
             "validFrom": date_value(row.get("fvdesde") or row.get("fecact")),
             "validTo": date_value(row.get("fvhasta")),
             "batch": value(row.get("lote")),

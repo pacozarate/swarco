@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-16";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-17";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -252,7 +252,7 @@ function tftOffersTable(rows) {
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>Codigo</th><th>Lote</th><th>Precio</th><th>Fvdesde</th><th>Fvhasta</th></tr>
+          <tr><th>Codigo</th><th>Lote</th><th>Precio</th><th>Proveedor</th><th>Fvdesde</th><th>Fvhasta</th></tr>
         </thead>
         <tbody>
           ${rows.map((row) => `
@@ -260,6 +260,7 @@ function tftOffersTable(rows) {
               <td>${row.code || "-"}</td>
               <td class="numeric">${row.batch ?? "-"}</td>
               <td class="numeric">${formatPrice(row.price)}</td>
+              <td>${row.supplier || "-"}</td>
               <td>${row.validFrom || "-"}</td>
               <td>${row.validTo || "-"}</td>
             </tr>

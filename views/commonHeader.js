@@ -1,4 +1,4 @@
-import { ROLES } from "../js/authEngine.js?v=20260716-v4-1-16";
+import { ROLES } from "../js/authEngine.js?v=20260716-v4-1-17";
 
 export function renderHeader(state, actions) {
   return `
