@@ -765,6 +765,9 @@ tr:last-child td {
 
 .money-input-wrap {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
 .money-input-wrap .form-control {
@@ -774,11 +777,15 @@ tr:last-child td {
 .money-input-symbol {
   position: absolute;
   top: 50%;
-  right: 10px;
+  right: 104px;
   color: var(--color-text-muted);
   font-weight: 900;
   transform: translateY(-50%);
   pointer-events: none;
+}
+
+.money-confirm-button {
+  min-height: 40px;
 }
 
 .image-preview-card {

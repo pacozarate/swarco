@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-24";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-25";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -524,6 +524,7 @@ function moneyNumberRow(label, key, value, min, max, step = 0.01, tone = "") {
       <div class="money-input-wrap">
         <input class="form-control ${tone}" data-config="${key}" type="text" inputmode="decimal" value="${value ?? ""}" data-min="${min}" data-max="${max}" data-step="${step}" />
         <span class="money-input-symbol">€</span>
+        <button type="button" class="row-action-button money-confirm-button" id="confirmTftManualPrice">Confirmar</button>
       </div>
   `;
 }

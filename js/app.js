@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-24";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-24";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-24";
-import { validateTables } from "./validators.js?v=20260716-v4-1-24";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-24";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-24";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-24";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-24";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-24";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-24";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-24";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-24";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-24";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-24";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-24";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-24";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-24";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-24";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-24";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-24";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-24";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-24";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-24";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-24";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-25";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-25";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-25";
+import { validateTables } from "./validators.js?v=20260716-v4-1-25";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-25";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-25";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-25";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-25";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-25";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-25";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-25";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-25";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-25";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-25";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-25";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-25";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-25";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-25";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-25";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-25";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-25";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-25";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-25";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-25";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.24";
-const appBuild = "20260716-v4-1-24";
+const appVersion = "4.1.25";
+const appBuild = "20260716-v4-1-25";
 
 app.innerHTML = `
   <section class="screen">
@@ -441,6 +441,17 @@ function bindEvents(viewState) {
       render();
     });
   });
+  document.querySelector("#confirmTftManualPrice")?.addEventListener("click", () => {
+    const input = document.querySelector('[data-config="tftManualPrice"]');
+    const price = sanitizeNumericConfigValue("tftManualPrice", input?.value ?? state.config.tftManualPrice);
+    if (!window.confirm(`Usar este precio TFT manual (${formatCurrency(price)})?`)) return;
+    state.config.tftSelectionMode = "Manual";
+    state.config.tftManualPrice = price;
+    clearTftSelectedPrice();
+    markBomPending();
+    persistLocalState();
+    render();
+  });
   document.querySelectorAll("[data-option-group]").forEach((input) => {
     input.addEventListener("change", () => {
       const group = input.dataset.optionGroup;
@@ -505,6 +516,12 @@ function resetConfigurationForModel() {
 function handleConfigChange(event) {
   const key = event.currentTarget.dataset.config;
   if (!key) return;
+  if (key === "tftManualPrice") {
+    const value = normalizeManualPriceInput(event.currentTarget.value);
+    event.currentTarget.value = value;
+    state.config.tftManualPrice = value;
+    return;
+  }
   const value = key in numericConfigLimits ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
   state.config[key] = key === "tftSelectionMode" && value === "Selección" ? "Seleccionado" : value;
   if (key === "tftSelectionMode") {
@@ -542,6 +559,18 @@ function clearTftSelectedPrice() {
 function clearTftPriceChoice() {
   state.config.tftManualPrice = 0;
   clearTftSelectedPrice();
+}
+
+function normalizeManualPriceInput(value) {
+  const normalized = String(value || "")
+    .replace(/[^\d,.]/g, "")
+    .replace(".", ",");
+  const [integerPart = "", decimalPart = ""] = normalized.split(",");
+  const integerDigits = integerPart.replace(/\D/g, "").slice(0, 6);
+  const decimalDigits = decimalPart.replace(/\D/g, "").slice(0, 2);
+  const hasDecimal = normalized.includes(",");
+  const nextValue = `${integerDigits || "0"}${hasDecimal ? `,${decimalDigits}` : ""}`;
+  return sanitizeNumericConfigValue("tftManualPrice", nextValue) > 999999.99 ? "999999,99" : nextValue;
 }
 
 function focusPendingControl() {
