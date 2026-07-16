@@ -1,5 +1,5 @@
-import { normalizeRows } from "./normalizers.js?v=20260716-v4-1-34";
-import { makeVersion } from "./versioningEngine.js?v=20260716-v4-1-34";
+import { normalizeRows } from "./normalizers.js?v=20260716-v4-1-35";
+import { makeVersion } from "./versioningEngine.js?v=20260716-v4-1-35";
 
 export const tableDefinitions = [
   { key: "alart", label: "ALART" },
@@ -10,6 +10,7 @@ export const tableDefinitions = [
   { key: "ct_tft", label: "ct_TFT" },
   { key: "ct_led", label: "ct_LED" },
   { key: "mecanica", label: "mecanica" },
+  { key: "coste_mecanica", label: "CosteMecanica" },
   { key: "dimensiones_base", label: "DimensionesBase" },
   { key: "trl", label: "PNxxxy-TRL" }
 ];

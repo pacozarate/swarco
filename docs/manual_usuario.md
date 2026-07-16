@@ -53,5 +53,6 @@ La importacion acepta nombres equivalentes en castellano o ingles. Campos recome
 - ct_TFT: `code`, `description`, `active`
 - ct_LED: `code`, `description`, `faCode`, `faCurrent`, `faVoltage`, `dataCableCode`, `powerCableCode`
 - mecanica: `model`, `technology`, `basePrice`, `pricePerMm2`, `setup`, `version`
+- CosteMecanica: `code`, `description`, `functionalGroup`, `material`, `formula`, `weightKg`, `commercialCost`
 - DimensionesBase: `model`, `morphology`, `weightKg`, `inches`, `aspectRatio`, `totalWidthMm`, `totalHeightMm`, `visibleWidthMm`, `visibleHeightMm`, `borderWidthMm`, `borderHeightMm`
 - TRL: `model`, `group`, `code`, `description`, `type`, `image`, `root`, `default`

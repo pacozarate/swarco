@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-34";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-34";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-35";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-35";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -142,8 +142,8 @@ function mechanicalSubassembliesTable(rows = [], tables = {}) {
         </thead>
         <tbody>
           ${rows.map((row) => {
-            const unitPrice = alartLastPurchaseCost(row.code, tables);
-            const totalPrice = unitPrice * Number(row.quantity || 0);
+            const price = mechanicalUnitPrice(row.code, tables);
+            const totalPrice = price.unitPrice * Number(row.quantity || 0);
             return `
             <tr>
               <td>${row.code}</td>
@@ -152,7 +152,7 @@ function mechanicalSubassembliesTable(rows = [], tables = {}) {
               <td>${row.parent || "-"}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${row.weightKg === "" ? "-" : row.weightKg}</td>
-              <td class="numeric">${formatCurrency(unitPrice)}</td>
+              <td class="numeric">${formatCurrency(price.unitPrice)} <span class="price-source ${price.sourceClass}">${price.sourceLabel}</span></td>
               <td class="numeric">${formatCurrency(totalPrice)}</td>
               <td>${row.dimensionVariable ? "M" : "-"}</td>
             </tr>
@@ -963,6 +963,23 @@ function rowCost(code, tables) {
 function alartLastPurchaseCost(code, tables) {
   const article = (tables.alart || []).find((row) => row.code === code);
   return Number(article?.pultcomp || 0) || 0;
+}
+
+function mechanicalUnitPrice(code, tables) {
+  const historical = alartLastPurchaseCost(code, tables);
+  if (historical > 0) {
+    return {
+      unitPrice: historical,
+      sourceLabel: "Hist.",
+      sourceClass: "historical"
+    };
+  }
+  const estimated = (tables.coste_mecanica || []).find((row) => row.code === code);
+  return {
+    unitPrice: Number(estimated?.commercialCost || estimated?.pureMechanicalCost || 0) || 0,
+    sourceLabel: estimated ? "Estim." : "Sin precio",
+    sourceClass: estimated ? "estimated" : "missing"
+  };
 }
 
 function articleDescription(code, tables) {

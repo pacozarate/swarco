@@ -990,6 +990,31 @@ tr:last-child td {
   font-weight: 900;
 }
 
+.price-source {
+  display: inline-flex;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.price-source.historical {
+  color: #073b5a;
+  background: #d8efff;
+}
+
+.price-source.estimated {
+  color: #5c3b00;
+  background: #fff2bd;
+}
+
+.price-source.missing {
+  color: #7a271a;
+  background: #fee4e2;
+}
+
 .row-action-button {
   min-height: 26px;
   padding: 4px 9px;

@@ -84,6 +84,33 @@ const aliases = {
     setup: ["setup"],
     version: ["version"]
   },
+  coste_mecanica: {
+    code: ["code", "codigo", "código"],
+    description: ["description", "descripcion", "descripción"],
+    functionalGroup: ["functionalgroup", "grupo_funcional"],
+    material: ["material"],
+    formula: ["formula", "fórmula"],
+    thicknessMm: ["thicknessmm", "espesor_mm"],
+    widthMm: ["widthmm", "largo_mm"],
+    heightMm: ["heightmm", "alto_mm"],
+    weightKg: ["weightkg", "peso_kg"],
+    pureMechanicalCost: ["puremechanicalcost", "coste_mecanica_pura"],
+    materialCost: ["materialcost", "coste_material"],
+    materialCostPerKg: ["materialcostperkg", "coste_material_por_kg"],
+    assembly: ["assembly", "montaje"],
+    setupAlu: ["setupalu", "setup_alu"],
+    setupGalva: ["setupgalva", "setup_galva"],
+    rawMaterial: ["rawmaterial", "materia_prima"],
+    laserCut: ["lasercut", "corte_laser"],
+    folding: ["folding", "plegado"],
+    welding: ["welding", "soldadura"],
+    metalInserts: ["metalinserts", "insertos_metalicos"],
+    paintTreatment: ["painttreatment", "pintura_tratamiento"],
+    surfacePreparation: ["surfacepreparation", "preparacion_superficial"],
+    processes: ["processes", "procesos"],
+    operationCost: ["operationcost", "coste_operaciones"],
+    commercialCost: ["commercialcost", "coste_comercial"]
+  },
   dimensiones_base: {
     model: ["model", "modelo", "codigo_equipo", "codigo equipo", "código equipo"],
     morphology: ["morphology", "morfologia"],
@@ -147,8 +174,8 @@ function normalizeRow(tableName, row) {
       if (result[field] !== undefined) result[field] = toNumber(result[field], 0);
     });
   }
-  if (["alart", "gcesp", "alhis", "ct_led", "mecanica"].includes(tableName)) {
-    ["pmp", "pultcomp", "price", "realCost", "faCurrent", "faVoltage", "basePrice", "pricePerMm2", "setup"].forEach((field) => {
+  if (["alart", "gcesp", "alhis", "ct_led", "mecanica", "coste_mecanica"].includes(tableName)) {
+    ["pmp", "pultcomp", "price", "realCost", "faCurrent", "faVoltage", "basePrice", "pricePerMm2", "setup", "thicknessMm", "widthMm", "heightMm", "weightKg", "pureMechanicalCost", "materialCost", "materialCostPerKg", "setupAlu", "setupGalva", "rawMaterial", "laserCut", "folding", "welding", "metalInserts", "paintTreatment", "surfacePreparation", "operationCost", "commercialCost"].forEach((field) => {
       if (result[field] !== undefined) result[field] = toNumber(result[field], 0);
     });
   }
@@ -206,6 +233,7 @@ function normalizeCodes(tableName, row) {
     ct_tft: ["code"],
     ct_led: ["code", "faCode", "dataCableCode", "powerCableCode"],
     mecanica: [],
+    coste_mecanica: ["code"],
     dimensiones_base: ["model"],
     trl: ["model", "code", "root"]
   }[tableName] || [];

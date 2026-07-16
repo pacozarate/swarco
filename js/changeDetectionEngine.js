@@ -1,5 +1,5 @@
 const bomTables = new Set(["trl", "cplismat", "ct_led", "ct_tft", "alartdv"]);
-const priceTables = new Set(["gcesp", "alhis", "alart"]);
+const priceTables = new Set(["gcesp", "alhis", "alart", "coste_mecanica"]);
 
 export function detectChange(tableName, previousVersion, nextVersion) {
   if (!previousVersion) {

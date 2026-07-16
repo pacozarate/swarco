@@ -34,6 +34,7 @@ def main() -> None:
     ct_tft_rows = import_ct_tft()
     ct_led_rows = import_ct_led()
     trl_rows = import_trl()
+    coste_mecanica_rows = import_coste_mecanica()
     cplismat_rows = import_cplismat(alart_rows_all)
     needed_codes = collect_app_codes(cplismat_rows, gcesp_rows, alhis_rows, ct_tft_rows, ct_led_rows, trl_rows)
     alart_rows = [row for row in alart_rows_all if row["code"] in needed_codes]
@@ -44,6 +45,7 @@ def main() -> None:
     write_json(ROOT / "data/alhis.json", alhis_rows)
     write_json(ROOT / "data/ct_tft.json", ct_tft_rows)
     write_json(ROOT / "data/ct_led.json", ct_led_rows)
+    write_json(ROOT / "data/coste_mecanica.json", coste_mecanica_rows)
     write_json(ROOT / "data/trl/pn-demo-trl.json", trl_rows)
 
 
@@ -224,6 +226,41 @@ def import_ct_led() -> list[dict[str, Any]]:
         }
         for row in rows
         if text(row.get("Referencia SWARCO"))
+    ]
+
+
+def import_coste_mecanica() -> list[dict[str, Any]]:
+    rows = sheet_dicts(SOURCE_DIR / "CosteMecanica.xlsx", "costeMecanica")
+    return [
+        {
+            "code": code(row.get("Código")),
+            "description": text(row.get("Descripción")),
+            "functionalGroup": text(row.get("Grupo_funcional")),
+            "material": text(row.get("Material")),
+            "formula": text(row.get("Fórmula")),
+            "thicknessMm": number(row.get("Espesor_mm")),
+            "widthMm": number(row.get("Largo_mm")),
+            "heightMm": number(row.get("Alto_mm")),
+            "weightKg": number(row.get("Peso_kg")),
+            "pureMechanicalCost": number(row.get("Coste_mecanica_pura")),
+            "materialCost": number(row.get("Coste_material")),
+            "materialCostPerKg": number(row.get("Coste_material_por_kg")),
+            "assembly": text(row.get("Montaje")),
+            "setupAlu": number(row.get("Setup_ALU")),
+            "setupGalva": number(row.get("Setup_GALVA")),
+            "rawMaterial": number(row.get("Materia_prima")),
+            "laserCut": number(row.get("Corte_laser")),
+            "folding": number(row.get("Plegado")),
+            "welding": number(row.get("Soldadura")),
+            "metalInserts": number(row.get("Insertos_metalicos")),
+            "paintTreatment": number(row.get("Pintura_tratamiento")),
+            "surfacePreparation": number(row.get("Preparacion_superficial")),
+            "processes": text(row.get("Procesos")),
+            "operationCost": number(row.get("Coste_operaciones")),
+            "commercialCost": number(row.get("Coste_comercial")),
+        }
+        for row in rows
+        if text(row.get("Código"))
     ]
 
 
