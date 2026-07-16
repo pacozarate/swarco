@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-32";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-32";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-33";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-33";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -404,6 +404,7 @@ function modulesTab(state) {
   const auxiliarySummary = auxiliarySummaryRow(state);
   if (auxiliarySummary) moduleSummary.push(auxiliarySummary);
   applyGlassTotals(moduleSummary, glassTotals);
+  applyTftPrice(moduleSummary, state);
   applyExcDeductions(moduleSummary, excDeductions);
   applyReplacementAdditions(moduleSummary, replacementAdditions);
   return `
@@ -439,17 +440,6 @@ function modulesTab(state) {
       <header class="tech-card-header orange">E Vidrios</header>
       <div class="tech-card-body">
         ${glassReferencesTable(glassRows)}
-      </div>
-    </article>
-
-    <article class="tech-card">
-      <header class="tech-card-header dark">Precio TFT</header>
-      <div class="tech-card-body form-grid">
-        ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"])}
-        ${moneyNumberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
-        ${selectRow("Precio Fijo", "tftPriceMode", state.config.tftPriceMode, ["Precio Fijo", "Modificar Precio"])}
-        ${selectRow("Sumar SetUp", "tftSetup", state.config.tftSetup, ["SET UP", "NO"])}
-        ${selectRow("Margen", "tftMarginMode", state.config.tftMarginMode, ["Sin Margen", "Modificar Margenes"])}
       </div>
     </article>
   `;
@@ -538,6 +528,20 @@ function applyGlassTotals(rows, totals) {
     row.subtotal += glassTotal - previousGlass;
     row.total += glassTotal - previousGlass;
   });
+}
+
+function applyTftPrice(rows, state) {
+  const tftPrice = currentTftPrice(state);
+  if (!tftPrice) return;
+  const doorRow = rows.find((row) => String(row.group) === "2");
+  if (!doorRow) return;
+  doorRow.tft = tftPrice;
+  doorRow.total += tftPrice;
+}
+
+function currentTftPrice(state) {
+  if (state.config.tftSelectionMode === "Manual") return Number(state.config.tftManualPrice || 0) || 0;
+  return Number(state.config.tftSelectedPrice || 0) || 0;
 }
 
 function moduleSummaryRow(moduleRow, state) {
