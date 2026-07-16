@@ -17,9 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     (ROOT / "data/trl").mkdir(parents=True, exist_ok=True)
-    write_json(ROOT / "data/alart.json", import_alart())
+    alart_rows = import_alart()
+    write_json(ROOT / "data/alart.json", alart_rows)
     write_json(ROOT / "data/alartdv.json", import_alartdv())
-    write_json(ROOT / "data/cplismat.json", import_cplismat())
+    write_json(ROOT / "data/cplismat.json", import_cplismat(alart_rows))
     write_json(ROOT / "data/gcesp.json", import_gcesp())
     write_json(ROOT / "data/alhis.json", import_alhis_latest())
     write_json(ROOT / "data/ct_tft.json", import_ct_tft())
@@ -58,17 +59,48 @@ def import_alartdv() -> list[dict[str, Any]]:
     ]
 
 
-def import_cplismat() -> list[dict[str, Any]]:
-    rows = sheet_dicts(SOURCE_DIR / "DBO_CPLISMAT.xlsx", "cplismat")
-    return [
-        {
-            "codsup": code(row.get("codsup")),
-            "codele": code(row.get("codele")),
-            "cannec": number(row.get("cannec")),
-        }
-        for row in rows
-        if text(row.get("codsup")) and text(row.get("codele"))
-    ]
+def import_cplismat(alart_rows: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    rows = sheet_dicts(source_file("dbo_cplismat.xlsx", "DBO_CPLISMAT.xlsx"), "cplismat")
+    tipart_by_code = {row["code"]: row.get("type", "") for row in (alart_rows or import_alart())}
+    today = date.today()
+    output = []
+    for row in rows:
+        parent = code(row.get("codsup"))
+        child = code(row.get("codele"))
+        quantity = row.get("cannec")
+        valid_to = date_only(row.get("fecfin"))
+        if not parent or not child or quantity is None or quantity == "" or valid_to is None or valid_to < today:
+            continue
+        output.append({
+            "codsup": parent,
+            "codele": child,
+            "cannec": number(quantity),
+            "fecfin": valid_to.isoformat(),
+            "tipart": tipart_by_code.get(child, ""),
+        })
+    return output
+
+
+def source_file(*names: str) -> Path:
+    for name in names:
+        path = SOURCE_DIR / name
+        if path.exists():
+            return path
+    return SOURCE_DIR / names[0]
+
+
+def date_only(item: Any) -> date | None:
+    if isinstance(item, datetime):
+        return item.date()
+    if isinstance(item, date):
+        return item
+    parsed = date_value(item)
+    if not parsed:
+        return None
+    try:
+        return date.fromisoformat(parsed[:10])
+    except ValueError:
+        return None
 
 
 def import_gcesp() -> list[dict[str, Any]]:

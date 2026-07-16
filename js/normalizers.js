@@ -17,7 +17,9 @@ const aliases = {
   cplismat: {
     codsup: ["codsup", "padre", "parent"],
     codele: ["codele", "hijo", "componente", "child"],
-    cannec: ["cannec", "cantidad", "qty", "quantity"]
+    cannec: ["cannec", "cantidad", "qty", "quantity"],
+    fecfin: ["fecfin", "validto", "valid_to", "fecha_fin"],
+    tipart: ["tipart", "tipo", "type"]
   },
   gcesp: {
     code: ["code", "codigo", "articulo", "codart"],

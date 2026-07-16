@@ -30,6 +30,19 @@ explodeBom({ roots, cplismatRows, maxLevel = 6 })
 
 La salida contiene `root`, `p1` a `p6`, `article`, `parent`, `quantity`, `level`, `routeId` y `warning`.
 
+### Origen `dbo_cplismat`
+
+La tabla `cplismat` replica la consulta Power Query de la version Excel para la lista de materiales padre-hijo:
+
+- Origen Excel: `DATOS_A_IMPORTAR/dbo_cplismat.xlsx`, hoja `cplismat`.
+- Columnas operativas conservadas: `codsup`, `codele`, `cannec`, `fecfin`.
+- Limpieza: codigos padre e hijo limpiados como texto tecnico.
+- Filtros: `cannec` no nulo y `fecfin >= Date.From(DateTime.LocalNow())`.
+- Enriquecimiento: merge left con `alart` usando `codele` contra `codart`, expandiendo `tipart`.
+- JSON generado: `data/cplismat.json` con `codsup`, `codele`, `cannec`, `fecfin` y `tipart`.
+
+Este `tipart` queda disponible para filtrar o auditar componentes de BOM sin volver a consultar `alart`.
+
 ## LED
 
 Formulas implementadas:
