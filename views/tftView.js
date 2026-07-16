@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-13";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-14";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -273,8 +273,15 @@ function tftOffersTable(rows) {
 function tftHistory(state, tftOptions) {
   const visibleCodes = new Set(tftOptions.map((row) => row.code).filter(Boolean));
   return (state.tables.alhis || [])
-    .filter((row) => visibleCodes.has(row.code) && Number(row.quantity || 0) > 0)
+    .filter((row) => visibleCodes.has(row.code) && Number(row.quantity || 0) > 0 && hasPurchaseSupplier(row))
     .sort((a, b) => compareDateDesc(a.date, b.date) || naturalCompare(a.code, b.code));
+}
+
+function hasPurchaseSupplier(row) {
+  const supplier = row.supplier;
+  if (supplier === null || supplier === undefined) return false;
+  const normalized = String(supplier).trim();
+  return normalized !== "" && normalized !== "-" && Number(normalized) !== 0;
 }
 
 function tftHistoryTable(rows) {
