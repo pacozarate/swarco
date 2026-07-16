@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-31";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-31";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-32";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-32";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -398,9 +398,12 @@ function modulesTab(state) {
   const excDeductions = excDeductionByGroup(excRows, state);
   const replacementRows = replacementReferenceRows(excRows, state);
   const replacementAdditions = replacementAdditionByGroup(replacementRows);
+  const glassRows = glassReferenceRows(state, selectedModules);
+  const glassTotals = glassTotalByGroup(glassRows);
   const moduleSummary = selectedModules.filter((row) => String(row.group) !== "6").map((row) => moduleSummaryRow(row, state));
   const auxiliarySummary = auxiliarySummaryRow(state);
   if (auxiliarySummary) moduleSummary.push(auxiliarySummary);
+  applyGlassTotals(moduleSummary, glassTotals);
   applyExcDeductions(moduleSummary, excDeductions);
   applyReplacementAdditions(moduleSummary, replacementAdditions);
   return `
@@ -429,6 +432,13 @@ function modulesTab(state) {
       <header class="tech-card-header green">D Refs reemplazadas</header>
       <div class="tech-card-body">
         ${replacementReferencesTable(replacementRows, state)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header orange">E Vidrios</header>
+      <div class="tech-card-body">
+        ${glassReferencesTable(glassRows)}
       </div>
     </article>
 
@@ -516,6 +526,17 @@ function applyReplacementAdditions(rows, additions) {
     row.subtotal += addition;
     row.total += addition;
     row.replacementAddition = addition;
+  });
+}
+
+function applyGlassTotals(rows, totals) {
+  rows.forEach((row) => {
+    const glassTotal = totals.get(String(row.group));
+    if (glassTotal === undefined) return;
+    const previousGlass = Number(row.glass || 0);
+    row.glass = glassTotal;
+    row.subtotal += glassTotal - previousGlass;
+    row.total += glassTotal - previousGlass;
   });
 }
 
@@ -709,6 +730,58 @@ function replacementQuantitySelect(row) {
   `;
 }
 
+function glassReferenceRows(state, selectedModules) {
+  const visibleAreaM2 = areaM2(state.tftDimensions?.visibleWidthMm, state.tftDimensions?.visibleHeightMm);
+  const doorModules = selectedModules.filter((moduleRow) => String(moduleRow.group) === "2");
+  const rows = doorModules.flatMap((moduleRow) => explodeModule(moduleRow.root || moduleRow.code, state)
+    .filter((row) => isGlassReference(row.article, state.tables))
+    .map((row) => {
+      const unitPrice = alartLastPurchaseCost(row.article, state.tables);
+      const referenceAreaM2 = glassReferenceAreaM2(row.article, state.tables);
+      const priceM2 = referenceAreaM2 > 0 ? unitPrice / referenceAreaM2 : 0;
+      return {
+        group: moduleRow.group,
+        code: row.article,
+        description: articleDescription(row.article, state.tables),
+        unitPrice,
+        priceM2,
+        visibleAreaM2,
+        total: priceM2 * visibleAreaM2
+      };
+    }));
+  return consolidateGlassRows(rows);
+}
+
+function glassReferencesTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">NO</div>`;
+  const total = rows.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Precio unitario</th><th>€/m2</th><th>Area visible</th><th>Total vidrio</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.group}</td>
+              <td>${row.code}</td>
+              <td>${row.description || "-"}</td>
+              <td class="numeric">${formatCurrency(row.unitPrice)}</td>
+              <td class="numeric">${formatCurrency(row.priceM2)}</td>
+              <td class="numeric">${formatSquareMeters(row.visibleAreaM2)}</td>
+              <td class="numeric">${formatCurrency(row.total)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="6">TOTAL</td><td class="numeric">${formatCurrency(total)}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
 function auxiliariesTable(state) {
   const group = state.optionGroups.find((item) => item.key === "6");
   if (!group) return `<div class="image-placeholder compact">Sin auxiliares disponibles.</div>`;
@@ -806,16 +879,63 @@ function consolidateExcRows(rows) {
   return [...grouped.values()].sort((a, b) => naturalCompare(a.group, b.group) || naturalCompare(a.code, b.code));
 }
 
+function consolidateGlassRows(rows) {
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const key = `${row.group}|${row.code}`;
+    if (!grouped.has(key)) grouped.set(key, { ...row });
+  });
+  return [...grouped.values()].sort((a, b) => naturalCompare(a.group, b.group) || naturalCompare(a.code, b.code));
+}
+
+function glassTotalByGroup(rows) {
+  const totals = new Map();
+  rows.forEach((row) => {
+    const group = String(row.group);
+    totals.set(group, (totals.get(group) || 0) + Number(row.total || 0));
+  });
+  return totals;
+}
+
 function isExcReference(code, tables) {
   const upperCode = String(code || "").toUpperCase();
   const article = articleDv(code, tables);
   return String(article?.dva17 || "").trim().toUpperCase() === "EXC" && !upperCode.includes("AV");
 }
 
+function isGlassReference(code, tables) {
+  const upperCode = String(code || "").toUpperCase();
+  const article = articleDv(code, tables);
+  return upperCode.includes("AV")
+    && String(article?.dva17 || "").trim().toUpperCase() === "GLASS"
+    && costBucket(code, tables) === "glass";
+}
+
+function glassReferenceAreaM2(code, tables) {
+  const dimensions = parseSizePair(articleDv(code, tables)?.dva18);
+  return areaM2(dimensions.width, dimensions.height);
+}
+
+function parseSizePair(value) {
+  const text = String(value || "").trim().toLowerCase().replace(",", ".");
+  const match = text.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/);
+  if (!match) return { width: 0, height: 0 };
+  return {
+    width: Number(match[1]) || 0,
+    height: Number(match[2]) || 0
+  };
+}
+
+function areaM2(widthMm, heightMm) {
+  const width = Number(widthMm) || 0;
+  const height = Number(heightMm) || 0;
+  return width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 0;
+}
+
 function costBucket(code, tables) {
   const upperCode = String(code || "").toUpperCase();
-  if (upperCode.includes("AV")) return "glass";
   const dv = articleDv(code, tables);
+  if (upperCode.includes("AV") && String(dv?.dva17 || "").trim().toUpperCase() === "GLASS") return "glass";
   if (String(dv?.dva17 || "").trim().toUpperCase() === "MEC" || /AM\d+/.test(upperCode)) return "mec";
   return "noMec";
 }
@@ -1000,6 +1120,12 @@ function formatCurrency(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
+}
+
+function formatSquareMeters(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return `${new Intl.NumberFormat("es-ES", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(number)} m2`;
 }
 
 function escapeAttr(value) {
