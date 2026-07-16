@@ -1,4 +1,4 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-22";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-23";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -330,7 +330,7 @@ function tftPriceSelectionPanel(state, offerRows, historyRows) {
     <div class="price-selection-panel">
       <div class="form-grid detail-readonly-grid">
         ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"], undefined, undefined, "critical")}
-        ${manualMode ? numberRow("Importe manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical") : readRow("Importe seleccionado", selected.priceLabel, selected.tone)}
+        ${manualMode ? moneyNumberRow("Importe manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical") : readRow("Importe seleccionado", selected.priceLabel, selected.tone)}
         ${readRow("Origen precio", selected.sourceLabel, selected.tone)}
         ${readRow("Referencia precio", selected.referenceLabel, selected.tone)}
       </div>
@@ -404,7 +404,7 @@ function modulesTab(state) {
         <header class="tech-card-header dark">Precio TFT</header>
         <div class="tech-card-body form-grid">
           ${selectRow("Precio manual/seleccionado", "tftSelectionMode", state.config.tftSelectionMode, ["Seleccionado", "Manual"])}
-          ${numberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
+          ${moneyNumberRow("Coste TFT Manual", "tftManualPrice", state.config.tftManualPrice, 0, 999999.99, 0.01, "critical")}
           ${selectRow("Precio Fijo", "tftPriceMode", state.config.tftPriceMode, ["Precio Fijo", "Modificar Precio"])}
           ${selectRow("Sumar SetUp", "tftSetup", state.config.tftSetup, ["SET UP", "NO"])}
           ${selectRow("Margen", "tftMarginMode", state.config.tftMarginMode, ["Sin Margen", "Modificar Margenes"])}
@@ -515,6 +515,16 @@ function numberRow(label, key, value, min, max, step = 1, tone = "") {
   return `
       <label class="form-label">${label}</label>
       <input class="form-control ${tone}" data-config="${key}" type="number" value="${value ?? ""}" min="${min}" max="${max}" step="${step}" />
+  `;
+}
+
+function moneyNumberRow(label, key, value, min, max, step = 0.01, tone = "") {
+  return `
+      <label class="form-label">${label}</label>
+      <div class="money-input-wrap">
+        <input class="form-control ${tone}" data-config="${key}" type="text" inputmode="decimal" value="${value ?? ""}" data-min="${min}" data-max="${max}" data-step="${step}" />
+        <span class="money-input-symbol">€</span>
+      </div>
   `;
 }
 

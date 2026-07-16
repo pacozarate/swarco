@@ -763,6 +763,24 @@ tr:last-child td {
   font-weight: 900;
 }
 
+.money-input-wrap {
+  position: relative;
+}
+
+.money-input-wrap .form-control {
+  padding-right: 30px;
+}
+
+.money-input-symbol {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--color-text-muted);
+  font-weight: 900;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .image-preview-card {
   min-height: 280px;
 }

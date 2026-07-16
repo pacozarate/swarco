@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-22";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-22";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-22";
-import { validateTables } from "./validators.js?v=20260716-v4-1-22";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-22";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-22";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-22";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-22";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-22";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-22";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-22";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-22";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-22";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-22";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-22";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-22";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-22";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-22";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-22";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-22";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-22";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-22";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-22";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-22";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-23";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-23";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-23";
+import { validateTables } from "./validators.js?v=20260716-v4-1-23";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-23";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-23";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-23";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-23";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-23";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-23";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-23";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-23";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-23";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-23";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-23";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-23";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-23";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-23";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-23";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-23";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-23";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-23";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-23";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-23";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.22";
-const appBuild = "20260716-v4-1-22";
+const appVersion = "4.1.23";
+const appBuild = "20260716-v4-1-23";
 
 app.innerHTML = `
   <section class="screen">
@@ -123,6 +123,7 @@ const tableKeys = ["alart", "alhis", "gcesp", "alartdv", "cplismat", "ct_tft", "
 const storageKey = "swarco-configurator-state-v7";
 const nuesoAccessPassword = "NUESO2026";
 const nuesoRoutes = ["maintenance", "model", "mechanics", "formulas", "bom", "costing"];
+let focusTftManualPriceAfterRender = false;
 const numericConfigLimits = {
   widthMm: { min: 1, max: 10000 },
   heightMm: { min: 1, max: 10000 },
@@ -316,6 +317,7 @@ function render() {
     exportTrace: () => downloadJson("trazabilidad-configurador-swarco.json", buildTrace(viewState))
   });
   bindEvents(viewState);
+  focusPendingControl();
 }
 
 function renderRoute(viewState) {
@@ -503,8 +505,9 @@ function resetConfigurationForModel() {
 function handleConfigChange(event) {
   const key = event.currentTarget.dataset.config;
   if (!key) return;
-  const value = event.currentTarget.type === "number" ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
+  const value = key in numericConfigLimits ? sanitizeNumericConfigValue(key, event.currentTarget.value) : event.currentTarget.value;
   state.config[key] = key === "tftSelectionMode" && value === "Selección" ? "Seleccionado" : value;
+  if (key === "tftSelectionMode" && state.config[key] === "Manual") focusTftManualPriceAfterRender = true;
   if (tftFilterConfigKeys.has(key)) {
     syncTftSelection();
     clearTftSelectedPrice();
@@ -531,6 +534,17 @@ function clearTftSelectedPrice() {
   state.config.tftSelectedPrice = 0;
   state.config.tftSelectedPriceCode = "";
   state.config.tftSelectedPriceLabel = "";
+}
+
+function focusPendingControl() {
+  if (!focusTftManualPriceAfterRender) return;
+  focusTftManualPriceAfterRender = false;
+  window.requestAnimationFrame(() => {
+    const input = document.querySelector('[data-config="tftManualPrice"]');
+    if (!input) return;
+    input.focus();
+    input.setSelectionRange?.(0, 0);
+  });
 }
 
 function syncTftSelection() {
@@ -661,7 +675,7 @@ function sanitizeConfig(defaultConfig = {}) {
 }
 
 function sanitizeNumericConfigValue(key, value, fallback) {
-  const number = Number(value);
+  const number = Number(String(value).replace(",", "."));
   if (!Number.isFinite(number)) return fallback ?? state.config?.[key] ?? 0;
   const limits = numericConfigLimits[key];
   if (!limits) return number;
