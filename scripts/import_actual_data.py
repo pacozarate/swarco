@@ -137,7 +137,8 @@ def collect_app_codes(*datasets: list[dict[str, Any]]) -> set[str]:
 
 def import_gcesp(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
     rows = sheet_dicts(SOURCE_DIR / "dbo_gcesp.xlsx", "gcesp")
-    return [
+    today = date.today()
+    output = [
         {
             "code": code(row.get("codart")),
             "description": text(row.get("des")),
@@ -147,8 +148,12 @@ def import_gcesp(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
             "batch": value(row.get("lote")),
         }
         for row in rows
-        if text(row.get("codart")) and (date_only(row.get("fvhasta")) or date.max) >= cutoff
+        if text(row.get("codart"))
+        and (date_only(row.get("fvhasta")) or date.max) > today
+        and (date_only(row.get("fvdesde") or row.get("fecact")) or date.min) < date(2027, 1, 1)
+        and (date_only(row.get("fvhasta")) or date.max) >= cutoff
     ]
+    return sorted(output, key=lambda row: row.get("validFrom") or "", reverse=True)
 
 
 def import_alhis(cutoff: date = APP_DATA_CUTOFF) -> list[dict[str, Any]]:
@@ -181,9 +186,12 @@ def import_ct_tft() -> list[dict[str, Any]]:
             "active": True,
             "manufacturer": text(row.get("Fabricante")),
             "inches": text(row.get("Tamaño")).replace("''", ""),
+            "inchesNumber": number_or_none(clean_inches(row.get("Tamaño"))),
             "format": text(row.get("Aspect ratio")),
             "brightness": text(row.get("Luminosidad")),
-            "resolution": text(row.get("Resolución")),
+            "resolution": normalized_resolution(row.get("Resolución")),
+            "resolutionWidth": resolution_parts(row.get("Resolución"))[0],
+            "resolutionHeight": resolution_parts(row.get("Resolución"))[1],
             "tempRange": text(row.get("Rango Temp.")),
             "visibleArea": normalize_size_text(row.get("Tamaño área activa"), row.get("Aspect ratio")),
             "outerSize": text(row.get("Tamaño_1")),
@@ -204,6 +212,7 @@ def import_ct_led() -> list[dict[str, Any]]:
             "moduleRows": number(row.get("Resolución de módulo en y")),
             "pitchX": number(row.get("Paso en x")),
             "pitchY": number(row.get("Paso en y")),
+            "pasoxy": f"{number_text(row.get('Paso en x'))}|{number_text(row.get('Paso en y'))}",
             "currentModule": number(row.get("A total")),
             "faCode": code(row.get("Cod SWARCO FA")),
             "faVoltage": number(row.get("Vdc (V)")),
@@ -323,6 +332,35 @@ def number_or_none(item: Any) -> float | None:
         return float(current.replace(".", "").replace(",", "."))
     except ValueError:
         return None
+
+
+def clean_inches(item: Any) -> str:
+    current = text(item)
+    for token in ("''", '"', "'", " in", "in", " "):
+        current = current.replace(token, "")
+    return current
+
+
+def resolution_parts(item: Any) -> tuple[float | None, float | None]:
+    current = text(item).upper().replace("×", "X").replace("*", "X").replace("x", "X").replace(" ", "")
+    if "X" not in current:
+        return (None, None)
+    left, right = current.split("X", 1)
+    return (number_or_none(left), number_or_none(right))
+
+
+def normalized_resolution(item: Any) -> str:
+    width, height = resolution_parts(item)
+    if width is None or height is None:
+        return text(item)
+    return f"{format_size_number(width)}X{format_size_number(height)}"
+
+
+def number_text(item: Any) -> str:
+    current = number(item)
+    if float(current).is_integer():
+        return str(int(current))
+    return str(current).replace(".", ",")
 
 
 def normalize_size_text(size: Any, aspect_ratio: Any = "") -> str:

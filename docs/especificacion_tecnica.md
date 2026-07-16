@@ -76,6 +76,36 @@ La tabla `alhis` replica la consulta Power Query de la version Excel para movimi
 - Filtro app adicional: `fecmov >= 2020-01-01`.
 - JSON generado: `data/alhis.json` con historico de entradas recientes y precios de compra.
 
+### Origen `ct_led`
+
+La tabla `ct_led` replica la consulta Power Query sobre `Calculation Tool LEDS.xlsx`:
+
+- Origen Excel: hoja `CTToolLEDS`.
+- Conserva referencias, color, resolucion de modulo, pasos, corriente, fuente de alimentacion y cables.
+- Campo calculado: `pasoxy = Paso en x | Paso en y`, con formato decimal espanol.
+- JSON generado: `data/ct_led.json`.
+
+### Origen `ct_tft`
+
+La tabla `ct_tft` replica la consulta Power Query sobre `Calculation Tool TFTS.xlsx`:
+
+- Origen Excel: hoja `CTOOLTFTS`.
+- Normaliza `Resolución` reemplazando `×`, `*` y `x` por `X`.
+- Calcula `resolutionWidth`, `resolutionHeight` y `resolution`.
+- Calcula `inchesNumber` limpiando simbolos de pulgadas y soportando coma o punto decimal.
+- Mantiene la correccion preventiva de tamaños anómalos, por ejemplo `12010x681` a escala real.
+- JSON generado: `data/ct_tft.json`.
+
+### Origen `dbo_gcesp`
+
+La tabla `gcesp` replica la consulta Power Query sobre `dbo_gcesp.xlsx`:
+
+- Origen Excel: tabla `gcesp`.
+- Conserva `codart`, `lote`, `des`, `pre`, `fvdesde` y `fvhasta`.
+- Filtros: `fvhasta > hoy`, `fvdesde < 2027-01-01` y corte operativo minimo `2020-01-01`.
+- Orden logico para costes: el motor toma la tarifa mas reciente por `validFrom`.
+- JSON generado: `data/gcesp.json`.
+
 ## LED
 
 Formulas implementadas:
