@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-19";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-19";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-19";
-import { validateTables } from "./validators.js?v=20260716-v4-1-19";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-19";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-19";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-19";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-19";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-19";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-19";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-19";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-19";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-19";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-19";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-19";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-19";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-19";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-19";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-19";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-19";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-19";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-19";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-19";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-19";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-20";
+import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-20";
+import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-20";
+import { validateTables } from "./validators.js?v=20260716-v4-1-20";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-20";
+import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-20";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-20";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-20";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-20";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-20";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-20";
+import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-20";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-20";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-20";
+import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-20";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-20";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-20";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-20";
+import { tftView } from "../views/tftView.js?v=20260716-v4-1-20";
+import { ledView } from "../views/ledView.js?v=20260716-v4-1-20";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-20";
+import { bomView } from "../views/bomView.js?v=20260716-v4-1-20";
+import { costingView } from "../views/costingView.js?v=20260716-v4-1-20";
+import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-20";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.19";
-const appBuild = "20260716-v4-1-19";
+const appVersion = "4.1.20";
+const appBuild = "20260716-v4-1-20";
 
 app.innerHTML = `
   <section class="screen">
@@ -740,10 +740,15 @@ function getTftDimensions(config, details) {
   }
   const visible = parseSize(details.visibleArea, config.tftAspectRatio);
   const fallbackOuter = parseSize(details.outerSize, config.tftAspectRatio);
-  const visibleWidthMm = visible.width || Number(base.visibleWidthMm) || fallbackOuter.width;
-  const visibleHeightMm = visible.height || Number(base.visibleHeightMm) || fallbackOuter.height;
-  const baseMechanicalWidthMm = borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm);
-  const baseMechanicalHeightMm = borderHeightMm ? mechanicalFromVisible(visibleHeightMm, borderHeightMm) : (fallbackOuter.height || Number(base.totalHeightMm) || visibleHeightMm);
+  const usesBasePlanDimensions = sameNumericValue(details.inches, base.inches) && sameTextValue(config.tftAspectRatio, base.aspectRatio);
+  const visibleWidthMm = usesBasePlanDimensions ? Number(base.visibleWidthMm) : (visible.width || Number(base.visibleWidthMm) || fallbackOuter.width);
+  const visibleHeightMm = usesBasePlanDimensions ? Number(base.visibleHeightMm) : (visible.height || Number(base.visibleHeightMm) || fallbackOuter.height);
+  const baseMechanicalWidthMm = usesBasePlanDimensions
+    ? Number(base.totalWidthMm)
+    : (borderWidthMm ? mechanicalFromVisible(visibleWidthMm, borderWidthMm) : (fallbackOuter.width || Number(base.totalWidthMm) || visibleWidthMm));
+  const baseMechanicalHeightMm = usesBasePlanDimensions
+    ? Number(base.totalHeightMm)
+    : (borderHeightMm ? mechanicalFromVisible(visibleHeightMm, borderHeightMm) : (fallbackOuter.height || Number(base.totalHeightMm) || visibleHeightMm));
   return {
     visibleWidthMm,
     visibleHeightMm,
@@ -764,6 +769,16 @@ function getClockExtensionMm(clockCode) {
   const article = state.tables.alart?.find((row) => row.code === clockCode) || {};
   const gcesp = state.tables.gcesp?.find((row) => row.code === clockCode) || {};
   return parseFirstNumber(dv.dva17) || parseFirstNumber(article.description) || parseFirstNumber(gcesp.description) || 0;
+}
+
+function sameNumericValue(left, right) {
+  const leftNumber = Number(String(left || "").replace(",", "."));
+  const rightNumber = Number(String(right || "").replace(",", "."));
+  return Number.isFinite(leftNumber) && Number.isFinite(rightNumber) && Math.abs(leftNumber - rightNumber) < 0.01;
+}
+
+function sameTextValue(left, right) {
+  return String(left || "").trim().toUpperCase() === String(right || "").trim().toUpperCase();
 }
 
 function parseFirstNumber(value) {
