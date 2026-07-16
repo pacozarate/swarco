@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-33";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-33";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260716-v4-1-34";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260716-v4-1-34";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -52,100 +52,99 @@ function mechanicalTab(state) {
   const image = resolveEquipmentImage(state);
   return `
     <div class="mechanical-tab-grid">
-      <div class="mechanical-left-stack">
-        <article class="tech-card">
-          <header class="tech-card-header orange">Mecanica - Configuracion</header>
-          <div class="tech-card-body form-grid">
+      <article class="tech-card mechanical-config-card">
+        <header class="tech-card-header orange">Mecanica - Configuracion</header>
+        <div class="tech-card-body form-grid">
           ${readRow("Familia", state.currentModel.description)}
           ${state.optionGroups.filter((group) => ["1", "2", "3", "4", "5", "1L"].includes(group.key)).map((group) => groupSelect(group, state)).join("")}
           ${clockPositionRow(state)}
-          </div>
-        </article>
+        </div>
+      </article>
 
-        <article class="tech-card dimensions-card">
-          <header class="tech-card-header">Dimensiones TFT / Mecanica</header>
-          <div class="tech-card-body form-grid">
-            ${selectRow("AspectRatio", "tftAspectRatio", state.config.tftAspectRatio, unique(state.tables.ct_tft.map((row) => row.format)), undefined, undefined, "critical")}
-            ${selectRow("Tamaño", "tftSizeMode", state.config.tftSizeMode, ["Pulgadas/inches", "Largo x Alto"])}
-            ${state.config.tftSizeMode === "Pulgadas/inches"
-              ? selectRow("Pulgadas/Inches", "tftSizeInches", state.config.tftSizeInches, unique(state.tables.ct_tft.map((row) => row.inches)), undefined, undefined, "critical")
-              : manualSizeRows(state)}
-            ${selectRow("Espesor Chapa", "tftSheetThicknessMm", state.config.tftSheetThicknessMm, sheetThicknessOptions(), undefined, undefined, "critical")}
-            ${readRow("Largo Visible", `${state.tftDimensions.visibleWidthMm || "-"} mm`, "calculated")}
-            ${readRow("Alto Visible", `${state.tftDimensions.visibleHeightMm || "-"} mm`, "calculated")}
-            ${readRow("Largo Mecanica", `${state.tftDimensions.mechanicalWidthMm || "-"} mm`, "calculated")}
-            ${readRow("Alto Mecanica", `${state.tftDimensions.mechanicalHeightMm || "-"} mm`, "calculated")}
-            ${readRow("Borde Largo", `${state.tftDimensions.borderWidthMm || "-"} mm`, "locked")}
-            ${readRow("Borde Alto", `${state.tftDimensions.borderHeightMm || "-"} mm`, "locked")}
+      <article class="tech-card image-preview-card mechanical-image-card">
+        <header class="tech-card-header dark">Imagen del equipo</header>
+        <div class="tech-card-body">
+          <div class="equipment-image-box">
+            ${image ? `
+              <img class="equipment-image" src="${image.mainImage}" alt="${image.description || "Imagen del equipo seleccionado"}" />
+            ` : `
+              <div class="image-placeholder">No hay imagen disponible para esta configuracion.</div>
+            `}
           </div>
-        </article>
-      </div>
+        </div>
+      </article>
 
-      <div class="mechanical-right-stack">
-        <article class="tech-card image-preview-card">
-          <header class="tech-card-header dark">Imagen del equipo</header>
-          <div class="tech-card-body">
-            <div class="equipment-image-box">
-              ${image ? `
-                <img class="equipment-image" src="${image.mainImage}" alt="${image.description || "Imagen del equipo seleccionado"}" />
-              ` : `
-                <div class="image-placeholder">No hay imagen disponible para esta configuracion.</div>
-              `}
+      <article class="tech-card mechanical-material-card">
+        <header class="tech-card-header green">Material / Peso / Cantidad</header>
+        <div class="tech-card-body">
+          <div class="form-grid">
+            ${selectRow("Material", "tftMaterial", state.config.tftMaterial, ["GALVA", "ALU", "INOX"])}
+            ${readRow("Peso Mecanica", `${state.mechanics.mechanicalWeightKg || 0} kg`, "calculated critical")}
+            ${numberRow("Cantidad", "tftQuantity", state.config.tftQuantity, 1, 9999, 1, "critical")}
+          </div>
+          <div class="material-summary-grid">
+            <div class="kpi-box">
+              <div class="kpi-label">Peso mecanica</div>
+              <div class="kpi-value">${state.mechanics.mechanicalWeightKg || 0} kg</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Cantidad</div>
+              <div class="kpi-value warning">${state.config.tftQuantity || 0}</div>
             </div>
           </div>
-        </article>
+        </div>
+      </article>
 
-        <article class="tech-card">
-          <header class="tech-card-header green">Material / Peso / Cantidad</header>
-          <div class="tech-card-body">
-            <div class="form-grid">
-              ${selectRow("Material", "tftMaterial", state.config.tftMaterial, ["GALVA", "ALU", "INOX"])}
-              ${readRow("Peso Mecanica", `${state.mechanics.mechanicalWeightKg || 0} kg`, "calculated critical")}
-              ${numberRow("Cantidad", "tftQuantity", state.config.tftQuantity, 1, 9999, 1, "critical")}
-            </div>
-            <div class="material-summary-grid">
-              <div class="kpi-box">
-                <div class="kpi-label">Peso mecanica</div>
-                <div class="kpi-value">${state.mechanics.mechanicalWeightKg || 0} kg</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-label">Cantidad</div>
-                <div class="kpi-value warning">${state.config.tftQuantity || 0}</div>
-              </div>
-            </div>
-          </div>
-        </article>
+      <article class="tech-card dimensions-card mechanical-dimensions-card">
+        <header class="tech-card-header">Dimensiones TFT / Mecanica</header>
+        <div class="tech-card-body form-grid">
+          ${selectRow("AspectRatio", "tftAspectRatio", state.config.tftAspectRatio, unique(state.tables.ct_tft.map((row) => row.format)), undefined, undefined, "critical")}
+          ${selectRow("Tamaño", "tftSizeMode", state.config.tftSizeMode, ["Pulgadas/inches", "Largo x Alto"])}
+          ${state.config.tftSizeMode === "Pulgadas/inches"
+            ? selectRow("Pulgadas/Inches", "tftSizeInches", state.config.tftSizeInches, unique(state.tables.ct_tft.map((row) => row.inches)), undefined, undefined, "critical")
+            : manualSizeRows(state)}
+          ${selectRow("Espesor Chapa", "tftSheetThicknessMm", state.config.tftSheetThicknessMm, sheetThicknessOptions(), undefined, undefined, "critical")}
+          ${readRow("Largo Visible", `${state.tftDimensions.visibleWidthMm || "-"} mm`, "calculated")}
+          ${readRow("Alto Visible", `${state.tftDimensions.visibleHeightMm || "-"} mm`, "calculated")}
+          ${readRow("Largo Mecanica", `${state.tftDimensions.mechanicalWidthMm || "-"} mm`, "calculated")}
+          ${readRow("Alto Mecanica", `${state.tftDimensions.mechanicalHeightMm || "-"} mm`, "calculated")}
+          ${readRow("Borde Largo", `${state.tftDimensions.borderWidthMm || "-"} mm`, "locked")}
+          ${readRow("Borde Alto", `${state.tftDimensions.borderHeightMm || "-"} mm`, "locked")}
+        </div>
+      </article>
 
-        ${mechanicalSubassembliesCard(state)}
-      </div>
+      ${mechanicalSubassembliesCard(state)}
     </div>
   `;
 }
 
 function mechanicalSubassembliesCard(state) {
   return `
-    <article class="tech-card">
+    <article class="tech-card mechanical-subassemblies-card">
       <header class="tech-card-header">
         <span>Subconjuntos mecanicos</span>
         <span>${state.mechanicalSubassemblies.totalWeightKg || 0} kg</span>
       </header>
       <div class="tech-card-body">
-        ${mechanicalSubassembliesTable(state.mechanicalSubassemblies.rows)}
+        ${mechanicalSubassembliesTable(state.mechanicalSubassemblies.rows, state.tables)}
       </div>
     </article>
   `;
 }
 
-function mechanicalSubassembliesTable(rows = []) {
+function mechanicalSubassembliesTable(rows = [], tables = {}) {
   if (!rows.length) return `<div class="image-placeholder compact">No hay subconjuntos mecanicos para la configuracion seleccionada.</div>`;
   return `
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>Codigo</th><th>Descripcion</th><th>Origen</th><th>Padre</th><th>Cant.</th><th>Peso kg</th><th>Dim.</th></tr>
+          <tr><th>Codigo</th><th>Descripcion</th><th>Origen</th><th>Padre</th><th>Cant.</th><th>Peso kg</th><th>Precio unit.</th><th>Precio total</th><th>Dim.</th></tr>
         </thead>
         <tbody>
-          ${rows.map((row) => `
+          ${rows.map((row) => {
+            const unitPrice = alartLastPurchaseCost(row.code, tables);
+            const totalPrice = unitPrice * Number(row.quantity || 0);
+            return `
             <tr>
               <td>${row.code}</td>
               <td>${row.description || "-"}</td>
@@ -153,9 +152,12 @@ function mechanicalSubassembliesTable(rows = []) {
               <td>${row.parent || "-"}</td>
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${row.weightKg === "" ? "-" : row.weightKg}</td>
+              <td class="numeric">${formatCurrency(unitPrice)}</td>
+              <td class="numeric">${formatCurrency(totalPrice)}</td>
               <td>${row.dimensionVariable ? "M" : "-"}</td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     </div>

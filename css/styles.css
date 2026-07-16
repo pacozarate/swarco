@@ -655,12 +655,41 @@ tr:last-child td {
   align-items: start;
 }
 
-.mechanical-tab-grid,
+.mechanical-tab-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(300px, 0.85fr) minmax(320px, 1fr);
+  grid-template-areas:
+    "config image material"
+    "dimensions subassemblies subassemblies";
+  gap: 10px;
+  align-items: start;
+}
+
 .tft-mechanical-layout {
   display: grid;
   grid-template-columns: 420px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+}
+
+.mechanical-config-card {
+  grid-area: config;
+}
+
+.mechanical-image-card {
+  grid-area: image;
+}
+
+.mechanical-material-card {
+  grid-area: material;
+}
+
+.mechanical-dimensions-card {
+  grid-area: dimensions;
+}
+
+.mechanical-subassemblies-card {
+  grid-area: subassemblies;
 }
 
 .mechanical-left-stack,
@@ -809,15 +838,15 @@ tr:last-child td {
 }
 
 .image-preview-card {
-  min-height: 280px;
+  min-height: 0;
 }
 
 .equipment-image-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 240px;
-  padding: 12px;
+  min-height: 210px;
+  padding: 8px;
   background: #f4f7fa;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -825,7 +854,7 @@ tr:last-child td {
 
 .equipment-image {
   max-width: 100%;
-  max-height: 260px;
+  max-height: 210px;
   object-fit: contain;
 }
 
@@ -1139,6 +1168,15 @@ tr:last-child td {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mechanical-tab-grid {
+    grid-template-areas:
+      "config"
+      "image"
+      "material"
+      "dimensions"
+      "subassemblies";
   }
 
   .config-tab-button {
