@@ -1,5 +1,6 @@
-import { normalizeRows } from "./normalizers.js?v=20260716-v4-1-36";
-import { makeVersion } from "./versioningEngine.js?v=20260716-v4-1-36";
+import { normalizeRows } from "./normalizers.js?v=20260731-v4-1-37";
+import { makeVersion } from "./versioningEngine.js?v=20260731-v4-1-37";
+import { supabaseConfig } from "./supabaseConfig.js?v=20260731-v4-1-37";
 
 export const tableDefinitions = [
   { key: "alart", label: "ALART" },
@@ -33,6 +34,45 @@ export async function loadJson(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`No se pudo cargar ${path}`);
   return response.json();
+}
+
+export async function loadTableData(tableKeys) {
+  if (!supabaseConfig.enabled || !supabaseConfig.url || !supabaseConfig.anonKey) {
+    return loadLocalTableData(tableKeys);
+  }
+  try {
+    return await loadSupabaseTableData(tableKeys);
+  } catch (error) {
+    console.warn("No se pudo cargar desde Supabase; usando JSON local", error);
+    return loadLocalTableData(tableKeys);
+  }
+}
+
+async function loadLocalTableData(tableKeys) {
+  const demoData = await Promise.all(tableKeys.map((key) => loadJson(`data/${key === "trl" ? "trl/pn-demo-trl" : key}.json`)));
+  return Object.fromEntries(tableKeys.map((key, index) => [key, demoData[index]]));
+}
+
+async function loadSupabaseTableData(tableKeys) {
+  const datasets = tableKeys.map((key) => `"${key}"`).join(",");
+  const url = `${supabaseConfig.url.replace(/\/$/, "")}/rest/v1/app_dataset_chunks?select=dataset,chunk_index,rows&dataset=in.(${datasets})&order=dataset.asc,chunk_index.asc&limit=10000`;
+  const response = await fetch(url, {
+    headers: {
+      apikey: supabaseConfig.anonKey,
+      Authorization: `Bearer ${supabaseConfig.anonKey}`
+    }
+  });
+  if (!response.ok) throw new Error(`Supabase ${response.status}: ${await response.text()}`);
+  const chunks = await response.json();
+  const grouped = Object.fromEntries(tableKeys.map((key) => [key, []]));
+  chunks.forEach((chunk) => {
+    if (!grouped[chunk.dataset]) grouped[chunk.dataset] = [];
+    grouped[chunk.dataset].push(...(chunk.rows || []));
+  });
+  tableKeys.forEach((key) => {
+    if (!Array.isArray(grouped[key]) || !grouped[key].length) throw new Error(`Supabase no devolvio datos para ${key}`);
+  });
+  return grouped;
 }
 
 function sheetToRows(sheet) {

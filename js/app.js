@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260716-v4-1-36";
-import { loadJson, readWorkbookFile } from "./importExcel.js?v=20260716-v4-1-36";
-import { detectChange } from "./changeDetectionEngine.js?v=20260716-v4-1-36";
-import { validateTables } from "./validators.js?v=20260716-v4-1-36";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260716-v4-1-36";
-import { getTftDetails } from "./tftDataEngine.js?v=20260716-v4-1-36";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260716-v4-1-36";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260716-v4-1-36";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260716-v4-1-36";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260716-v4-1-36";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260716-v4-1-36";
-import { calculateCosts } from "./costingEngine.js?v=20260716-v4-1-36";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260716-v4-1-36";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260716-v4-1-36";
-import { renderSidebar } from "./appRouter.js?v=20260716-v4-1-36";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260716-v4-1-36";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260716-v4-1-36";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260716-v4-1-36";
-import { tftView } from "../views/tftView.js?v=20260716-v4-1-36";
-import { ledView } from "../views/ledView.js?v=20260716-v4-1-36";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260716-v4-1-36";
-import { bomView } from "../views/bomView.js?v=20260716-v4-1-36";
-import { costingView } from "../views/costingView.js?v=20260716-v4-1-36";
-import { formulasView } from "../views/formulasView.js?v=20260716-v4-1-36";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260731-v4-1-37";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260731-v4-1-37";
+import { detectChange } from "./changeDetectionEngine.js?v=20260731-v4-1-37";
+import { validateTables } from "./validators.js?v=20260731-v4-1-37";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260731-v4-1-37";
+import { getTftDetails } from "./tftDataEngine.js?v=20260731-v4-1-37";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260731-v4-1-37";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260731-v4-1-37";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260731-v4-1-37";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260731-v4-1-37";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260731-v4-1-37";
+import { calculateCosts } from "./costingEngine.js?v=20260731-v4-1-37";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260731-v4-1-37";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260731-v4-1-37";
+import { renderSidebar } from "./appRouter.js?v=20260731-v4-1-37";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260731-v4-1-37";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260731-v4-1-37";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260731-v4-1-37";
+import { tftView } from "../views/tftView.js?v=20260731-v4-1-37";
+import { ledView } from "../views/ledView.js?v=20260731-v4-1-37";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260731-v4-1-37";
+import { bomView } from "../views/bomView.js?v=20260731-v4-1-37";
+import { costingView } from "../views/costingView.js?v=20260731-v4-1-37";
+import { formulasView } from "../views/formulasView.js?v=20260731-v4-1-37";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.36";
-const appBuild = "20260716-v4-1-36";
+const appVersion = "4.1.37";
+const appBuild = "20260731-v4-1-37";
 
 app.innerHTML = `
   <section class="screen">
@@ -160,10 +160,7 @@ init().catch((error) => {
 });
 
 async function init() {
-  const demoData = await Promise.all(tableKeys.map((key) => loadJson(`data/${key === "trl" ? "trl/pn-demo-trl" : key}.json`)));
-  tableKeys.forEach((key, index) => {
-    state.tables[key] = demoData[index];
-  });
+  state.tables = await loadTableData(tableKeys);
   restoreLocalState();
   state.models = getModels(state.tables.trl);
   if (!state.models.some((model) => model.model === state.selectedModel)) state.selectedModel = state.models[0]?.model || "";
