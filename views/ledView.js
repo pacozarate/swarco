@@ -1,5 +1,5 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-40";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-40";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-41";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-41";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
@@ -234,12 +234,12 @@ function moduleSummaryRow(moduleRow, state) {
   const rows = explodeModule(moduleRow.root || moduleRow.code, state);
   const summary = rows.reduce((sum, row) => {
     const amount = rowCost(row.article, state.tables) * Number(row.quantity || 0);
-    const bucket = costBucket(row.article, state.tables);
-    if (bucket === "mec") sum.mec += amount;
-    else sum.noMec += amount;
+    const bucket = costBucket(row.article, state.tables, state);
+    sum[bucket] += amount;
     return sum;
-  }, { noMec: 0, mec: 0 });
-  const total = summary.noMec + summary.mec;
+  }, emptyModuleCostSummary());
+  applyLedCalculatedSupplements(moduleRow, summary, state);
+  const total = moduleRowTotal(summary);
   return {
     group: moduleRow.group,
     code: moduleRow.code,
@@ -247,22 +247,29 @@ function moduleSummaryRow(moduleRow, state) {
     quantity: 1,
     noMec: summary.noMec,
     mec: summary.mec,
+    fa: summary.fa,
+    glassPc: summary.glassPc,
+    ledModules: summary.ledModules,
     total
   };
 }
 
 function moduleSummaryTable(rows) {
   if (!rows.length) return `<div class="image-placeholder compact">No hay modulos seleccionados.</div>`;
-  const totals = rows.reduce((sum, row) => ({
-    noMec: sum.noMec + row.noMec,
-    mec: sum.mec + row.mec,
-    total: sum.total + row.total
-  }), { noMec: 0, mec: 0, total: 0 });
+  const totals = rows.reduce((sum, row) => {
+    sum.noMec += row.noMec;
+    sum.mec += row.mec;
+    sum.fa += row.fa;
+    sum.glassPc += row.glassPc;
+    sum.ledModules += row.ledModules;
+    sum.total += row.total;
+    return sum;
+  }, { noMec: 0, mec: 0, fa: 0, glassPc: 0, ledModules: 0, total: 0 });
   return `
     <div class="data-table-wrapper">
       <table class="data-table compact">
         <thead>
-          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>Total</th></tr>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>FA</th><th>Vidrio | PC</th><th>Modulos LED</th><th>Total</th><th>%</th></tr>
         </thead>
         <tbody>
           ${rows.map((row) => `
@@ -273,12 +280,16 @@ function moduleSummaryTable(rows) {
               <td class="numeric">${formatQuantity(row.quantity)}</td>
               <td class="numeric">${formatCurrency(row.noMec)}</td>
               <td class="numeric">${row.mec ? formatCurrency(row.mec) : "-"}</td>
+              <td class="numeric">${row.fa ? formatCurrency(row.fa) : "-"}</td>
+              <td class="numeric">${row.glassPc || String(row.group) === "2" ? formatCurrency(row.glassPc) : "-"}</td>
+              <td class="numeric">${row.ledModules ? formatCurrency(row.ledModules) : "-"}</td>
               <td class="numeric">${formatCurrency(row.total)}</td>
+              <td class="numeric">${formatPercent(row.total, totals.total)}</td>
             </tr>
           `).join("")}
         </tbody>
         <tfoot>
-          <tr><td colspan="4">TOTAL</td><td class="numeric">${formatCurrency(totals.noMec)}</td><td class="numeric">${totals.mec ? formatCurrency(totals.mec) : "-"}</td><td class="numeric">${formatCurrency(totals.total)}</td></tr>
+          <tr><td colspan="4">TOTAL</td><td class="numeric">${formatCurrency(totals.noMec)}</td><td class="numeric">${totals.mec ? formatCurrency(totals.mec) : "-"}</td><td class="numeric">${totals.fa ? formatCurrency(totals.fa) : "-"}</td><td class="numeric">${formatCurrency(totals.glassPc)}</td><td class="numeric">${totals.ledModules ? formatCurrency(totals.ledModules) : "-"}</td><td class="numeric">${formatCurrency(totals.total)}</td><td class="numeric">100%</td></tr>
         </tfoot>
       </table>
     </div>
@@ -304,6 +315,9 @@ function auxiliarySummaryRow(state) {
     quantity: totals.quantity,
     noMec: totals.noMec,
     mec: totals.mec,
+    fa: 0,
+    glassPc: 0,
+    ledModules: 0,
     total: totals.total
   };
 }
@@ -352,7 +366,7 @@ function auxiliaryCostRow(row, state, selectedRow) {
   const rows = explodeModule(row.root || row.code, state);
   const summary = rows.reduce((sum, bomRow) => {
     const amount = rowCost(bomRow.article, state.tables) * Number(bomRow.quantity || 0);
-    const bucket = costBucket(bomRow.article, state.tables);
+    const bucket = costBucket(bomRow.article, state.tables, state);
     if (bucket === "mec") sum.mec += amount;
     else sum.noMec += amount;
     return sum;
@@ -471,9 +485,31 @@ function explodeModule(root, state) {
   return explodeBom({ roots: [root], cplismatRows: state.tables.cplismat || [], maxLevel: 6 });
 }
 
-function costBucket(code, tables) {
+function emptyModuleCostSummary() {
+  return { noMec: 0, mec: 0, fa: 0, glassPc: 0, ledModules: 0 };
+}
+
+function moduleRowTotal(summary) {
+  return summary.noMec + summary.mec + summary.fa + summary.glassPc + summary.ledModules;
+}
+
+function applyLedCalculatedSupplements(moduleRow, summary, state) {
+  if (String(moduleRow.group).toUpperCase() !== "2L") return;
+  const selectedLedModule = state.tables.ct_led.find((row) => row.code === state.config.ledModuleCode) || {};
+  const moduleCount = Number(state.ledCalculation?.moduleCount || 0);
+  const faCount = Number(state.ledCalculation?.faCount || 0);
+  summary.ledModules += rowCost(state.config.ledModuleCode, state.tables) * moduleCount;
+  summary.fa += rowCost(selectedLedModule.faCode, state.tables) * faCount;
+}
+
+function costBucket(code, tables, state = {}) {
   const upperCode = String(code || "").toUpperCase();
   const dv = articleDv(code, tables);
+  const description = String((tables.alart || []).find((row) => row.code === code)?.description || "").toUpperCase();
+  const selectedLedModule = (state.tables?.ct_led || []).find((row) => row.code === state.config?.ledModuleCode) || {};
+  if (upperCode === String(state.config?.ledModuleCode || "").toUpperCase() || description.includes("MATRIZ LED") || description.includes("MODULO MATRIZ LED")) return "ledModules";
+  if (upperCode === String(selectedLedModule.faCode || "").toUpperCase() || description.includes("FUENTE")) return "fa";
+  if (String(dv?.dva17 || "").trim().toUpperCase() === "GLASS" || upperCode.includes("AV") || description.includes("VIDRIO") || description.includes("POLICARBONATO")) return "glassPc";
   if (String(dv?.dva17 || "").trim().toUpperCase() === "MEC" || /AM\d+/.test(upperCode)) return "mec";
   return "noMec";
 }
@@ -509,4 +545,10 @@ function formatCurrency(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
+}
+
+function formatPercent(value, total) {
+  const totalNumber = Number(total);
+  if (!totalNumber) return "-";
+  return `${Math.round((Number(value || 0) / totalNumber) * 100)}%`;
 }
