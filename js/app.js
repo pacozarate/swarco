@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260806-v4-1-42";
-import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260806-v4-1-42";
-import { detectChange } from "./changeDetectionEngine.js?v=20260806-v4-1-42";
-import { validateTables } from "./validators.js?v=20260806-v4-1-42";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260806-v4-1-42";
-import { getTftDetails } from "./tftDataEngine.js?v=20260806-v4-1-42";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260806-v4-1-42";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260806-v4-1-42";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260806-v4-1-42";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260806-v4-1-42";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260806-v4-1-42";
-import { calculateCosts } from "./costingEngine.js?v=20260806-v4-1-42";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260806-v4-1-42";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260806-v4-1-42";
-import { renderSidebar } from "./appRouter.js?v=20260806-v4-1-42";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260806-v4-1-42";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260806-v4-1-42";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260806-v4-1-42";
-import { tftView } from "../views/tftView.js?v=20260806-v4-1-42";
-import { ledView } from "../views/ledView.js?v=20260806-v4-1-42";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260806-v4-1-42";
-import { bomView } from "../views/bomView.js?v=20260806-v4-1-42";
-import { costingView } from "../views/costingView.js?v=20260806-v4-1-42";
-import { formulasView } from "../views/formulasView.js?v=20260806-v4-1-42";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260806-v4-1-43";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260806-v4-1-43";
+import { detectChange } from "./changeDetectionEngine.js?v=20260806-v4-1-43";
+import { validateTables } from "./validators.js?v=20260806-v4-1-43";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260806-v4-1-43";
+import { getTftDetails } from "./tftDataEngine.js?v=20260806-v4-1-43";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260806-v4-1-43";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260806-v4-1-43";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260806-v4-1-43";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260806-v4-1-43";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260806-v4-1-43";
+import { calculateCosts } from "./costingEngine.js?v=20260806-v4-1-43";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260806-v4-1-43";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260806-v4-1-43";
+import { renderSidebar } from "./appRouter.js?v=20260806-v4-1-43";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260806-v4-1-43";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260806-v4-1-43";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260806-v4-1-43";
+import { tftView } from "../views/tftView.js?v=20260806-v4-1-43";
+import { ledView } from "../views/ledView.js?v=20260806-v4-1-43";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260806-v4-1-43";
+import { bomView } from "../views/bomView.js?v=20260806-v4-1-43";
+import { costingView } from "../views/costingView.js?v=20260806-v4-1-43";
+import { formulasView } from "../views/formulasView.js?v=20260806-v4-1-43";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.42";
-const appBuild = "20260806-v4-1-42";
+const appVersion = "4.1.43";
+const appBuild = "20260806-v4-1-43";
 
 app.innerHTML = `
   <section class="screen">
@@ -366,6 +366,18 @@ function bindEvents(viewState) {
   document.querySelector("#exportProductPdf")?.addEventListener("click", () => {
     exportProductSheetPdf();
   });
+  document.querySelectorAll("[data-product-zoom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const stage = document.querySelector(".product-sheet-stage");
+      if (!stage) return;
+      const current = Number(stage.dataset.zoom || 1);
+      const next = Math.min(1.4, Math.max(0.6, current + Number(button.dataset.productZoom || 0)));
+      stage.dataset.zoom = String(next);
+      stage.style.setProperty("--product-zoom", String(next));
+      const label = document.querySelector("#productZoomValue");
+      if (label) label.textContent = `${Math.round(next * 100)}%`;
+    });
+  });
   document.querySelector("#resetFormulas")?.addEventListener("click", () => {
     state.formulas = mergeFormulas(defaultFormulas);
     state.formulaEditorMessage = "Formulas restauradas";
@@ -558,7 +570,24 @@ function exportProductSheetPdf() {
         <link rel="stylesheet" href="css/styles.css?v=${appBuild}" />
         <style>
           body { margin: 0; background: #fff; }
-          .product-sheet { width: 100%; margin: 0; box-shadow: none; border: 0; }
+          .product-sheet-stage { overflow: visible; zoom: 1; padding: 0; }
+          .product-sheet { width: 194mm; max-width: 194mm; min-height: 281mm; max-height: 281mm; margin: 0; padding: 4mm; box-shadow: none; border: 0; font-size: 7.2px; overflow: hidden; }
+          .product-sheet-top { grid-template-columns: 32mm 1fr 55mm; gap: 4mm; }
+          .product-brand img { max-width: 28mm; }
+          .product-sheet h2 { font-size: 10px; margin-top: 2mm; }
+          .product-meta-row { grid-template-columns: 24mm 1fr; min-height: 5mm; }
+          .product-meta-row span, .product-meta-row strong, .product-calc-box th, .product-calc-box td, .product-table th, .product-table td { padding: 1.1mm 1.5mm; }
+          .product-hero { grid-template-columns: 62mm 1fr; gap: 5mm; margin-top: 2mm; }
+          .product-image-wrap { min-height: 34mm; }
+          .product-image-wrap img { max-height: 34mm; }
+          .product-calcs { gap: 2mm; }
+          .product-calc-title, .product-section-title { min-height: 4mm; padding: 1mm 1.5mm; }
+          .product-description { margin-top: 2mm; }
+          .product-description-box { min-height: 11mm; padding: 1.5mm; border-width: 0.4mm; }
+          .product-sheet-grid { grid-template-columns: 1fr 1fr; gap: 5mm; margin-top: 3mm; }
+          .product-column { gap: 2mm; }
+          .product-info-list { min-height: 24mm; padding: 1.5mm; line-height: 1.25; }
+          .product-info-list p { margin-bottom: 1.8mm; }
           .product-actions, .topbar, .sidebar, .module-header, .config-tabs { display: none !important; }
           @page { size: A4 portrait; margin: 8mm; }
         </style>

@@ -4,56 +4,63 @@ export function productSheetView(state, technology) {
   const title = `FICHA PRODUCTO ${technology}`;
   return `
     <div class="product-actions">
+      <div class="product-zoom-controls" aria-label="Zoom ficha de producto">
+        <button type="button" class="row-action-button" data-product-zoom="-0.1">-</button>
+        <span id="productZoomValue">100%</span>
+        <button type="button" class="row-action-button" data-product-zoom="0.1">+</button>
+      </div>
       <button type="button" class="primary-button" id="exportProductPdf">Exportar PDF</button>
     </div>
-    <article class="product-sheet product-sheet-${theme}">
-      <header class="product-sheet-top">
-        <div class="product-brand">
-          <img src="brand-assets/swarco-logo-header.png" alt="Swarco" />
-        </div>
-        <h2>${title}</h2>
-        <div class="product-meta">
-          ${metaRow("FECHA", shortDate())}
-          ${metaRow("Version Herramienta", state.appBuild || "-")}
-        </div>
-      </header>
+    <div class="product-sheet-stage">
+      <article class="product-sheet product-sheet-${theme}">
+        <header class="product-sheet-top">
+          <div class="product-brand">
+            <img src="brand-assets/swarco-logo-header.png" alt="Swarco" />
+          </div>
+          <h2>${title}</h2>
+          <div class="product-meta">
+            ${metaRow("FECHA", shortDate())}
+            ${metaRow("Version Herramienta", state.appBuild || "-")}
+          </div>
+        </header>
 
-      <section class="product-hero">
-        <div class="product-image-wrap">
-          ${equipmentImage(state)}
-        </div>
-        <div class="product-calcs">
-          ${calcBox("CALCULO MECANICA AUTOMATICO", [
-            ["Largo Mecanica (mm.)", productMechanicalWidth(state, isLed)],
-            ["Alto Mecanica (mm.)", productMechanicalHeight(state, isLed)],
-            ["TOTAL CALCULADO", formatCurrency(productCalculatedCost(state))]
-          ])}
-          ${calcBox("CALCULO MECANICA MANUAL", [
-            ["Largo Mecanica (mm.)", isLed ? state.config.ledManualWidthMm : state.config.tftMechanicalWidthMm],
-            ["Alto Mecanica (mm.)", isLed ? state.config.ledManualHeightMm : state.config.tftMechanicalHeightMm],
-            ["TOTAL MANUAL", formatCurrency(productManualCost(state))]
-          ])}
-        </div>
-      </section>
+        <section class="product-hero">
+          <div class="product-image-wrap">
+            ${equipmentImage(state)}
+          </div>
+          <div class="product-calcs">
+            ${calcBox("CALCULO MECANICA AUTOMATICO", [
+              ["Largo Mecanica (mm.)", productMechanicalWidth(state, isLed)],
+              ["Alto Mecanica (mm.)", productMechanicalHeight(state, isLed)],
+              ["TOTAL CALCULADO", formatCurrency(productCalculatedCost(state))]
+            ])}
+            ${calcBox("CALCULO MECANICA MANUAL", [
+              ["Largo Mecanica (mm.)", isLed ? state.config.ledManualWidthMm : state.config.tftMechanicalWidthMm],
+              ["Alto Mecanica (mm.)", isLed ? state.config.ledManualHeightMm : state.config.tftMechanicalHeightMm],
+              ["TOTAL MANUAL", formatCurrency(productManualCost(state))]
+            ])}
+          </div>
+        </section>
 
-      <section class="product-description">
-        <div class="product-section-title">Descripción</div>
-        <div class="product-description-box">${state.currentModel.longDescription || state.currentModel.description || ""}</div>
-      </section>
+        <section class="product-description">
+          <div class="product-section-title">Descripción</div>
+          <div class="product-description-box">${state.currentModel.longDescription || state.currentModel.description || ""}</div>
+        </section>
 
-      <div class="product-sheet-grid">
-        <div class="product-column">
-          ${sectionTable("Especificaciones", productSpecRows(state))}
-          ${sectionTable("Mecánica", productMechanicRows(state, isLed))}
-          ${sectionTable("Eléctrico", productElectricalRows(state, isLed))}
-          ${sectionTable("CARACTERÍSTICAS AMBIENTALES", productEnvironmentalRows())}
-          ${bomPreviewSection(state)}
+        <div class="product-sheet-grid">
+          <div class="product-column">
+            ${sectionTable("Especificaciones", productSpecRows(state))}
+            ${sectionTable("Mecánica", productMechanicRows(state, isLed))}
+            ${sectionTable("Eléctrico", productElectricalRows(state, isLed))}
+            ${sectionTable("CARACTERÍSTICAS AMBIENTALES", productEnvironmentalRows())}
+            ${bomPreviewSection(state)}
+          </div>
+          <div class="product-column">
+            ${isLed ? ledTechnologySections(state) : tftTechnologySections(state)}
+          </div>
         </div>
-        <div class="product-column">
-          ${isLed ? ledTechnologySections(state) : tftTechnologySections(state)}
-        </div>
-      </div>
-    </article>
+      </article>
+    </div>
   `;
 }
 
