@@ -1,31 +1,31 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260806-v4-1-41";
-import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260806-v4-1-41";
-import { detectChange } from "./changeDetectionEngine.js?v=20260806-v4-1-41";
-import { validateTables } from "./validators.js?v=20260806-v4-1-41";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260806-v4-1-41";
-import { getTftDetails } from "./tftDataEngine.js?v=20260806-v4-1-41";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260806-v4-1-41";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260806-v4-1-41";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260806-v4-1-41";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260806-v4-1-41";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260806-v4-1-41";
-import { calculateCosts } from "./costingEngine.js?v=20260806-v4-1-41";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260806-v4-1-41";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260806-v4-1-41";
-import { renderSidebar } from "./appRouter.js?v=20260806-v4-1-41";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260806-v4-1-41";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260806-v4-1-41";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260806-v4-1-41";
-import { tftView } from "../views/tftView.js?v=20260806-v4-1-41";
-import { ledView } from "../views/ledView.js?v=20260806-v4-1-41";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260806-v4-1-41";
-import { bomView } from "../views/bomView.js?v=20260806-v4-1-41";
-import { costingView } from "../views/costingView.js?v=20260806-v4-1-41";
-import { formulasView } from "../views/formulasView.js?v=20260806-v4-1-41";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260806-v4-1-42";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260806-v4-1-42";
+import { detectChange } from "./changeDetectionEngine.js?v=20260806-v4-1-42";
+import { validateTables } from "./validators.js?v=20260806-v4-1-42";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260806-v4-1-42";
+import { getTftDetails } from "./tftDataEngine.js?v=20260806-v4-1-42";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260806-v4-1-42";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260806-v4-1-42";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260806-v4-1-42";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260806-v4-1-42";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260806-v4-1-42";
+import { calculateCosts } from "./costingEngine.js?v=20260806-v4-1-42";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260806-v4-1-42";
+import { downloadCsv, downloadJson } from "./exportResults.js?v=20260806-v4-1-42";
+import { renderSidebar } from "./appRouter.js?v=20260806-v4-1-42";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260806-v4-1-42";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260806-v4-1-42";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260806-v4-1-42";
+import { tftView } from "../views/tftView.js?v=20260806-v4-1-42";
+import { ledView } from "../views/ledView.js?v=20260806-v4-1-42";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260806-v4-1-42";
+import { bomView } from "../views/bomView.js?v=20260806-v4-1-42";
+import { costingView } from "../views/costingView.js?v=20260806-v4-1-42";
+import { formulasView } from "../views/formulasView.js?v=20260806-v4-1-42";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.41";
-const appBuild = "20260806-v4-1-41";
+const appVersion = "4.1.42";
+const appBuild = "20260806-v4-1-42";
 
 app.innerHTML = `
   <section class="screen">
@@ -363,6 +363,9 @@ function bindEvents(viewState) {
       render();
     });
   });
+  document.querySelector("#exportProductPdf")?.addEventListener("click", () => {
+    exportProductSheetPdf();
+  });
   document.querySelector("#resetFormulas")?.addEventListener("click", () => {
     state.formulas = mergeFormulas(defaultFormulas);
     state.formulaEditorMessage = "Formulas restauradas";
@@ -535,6 +538,41 @@ function bindEvents(viewState) {
     persistLocalState();
     render();
   });
+}
+
+function exportProductSheetPdf() {
+  const sheet = document.querySelector(".product-sheet");
+  if (!sheet) return;
+  const printWindow = window.open("", "_blank", "width=900,height=1200");
+  if (!printWindow) {
+    window.print();
+    return;
+  }
+  const title = `${state.selectedModel || "SWARCO"} - ficha producto`;
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="es">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <link rel="stylesheet" href="css/styles.css?v=${appBuild}" />
+        <style>
+          body { margin: 0; background: #fff; }
+          .product-sheet { width: 100%; margin: 0; box-shadow: none; border: 0; }
+          .product-actions, .topbar, .sidebar, .module-header, .config-tabs { display: none !important; }
+          @page { size: A4 portrait; margin: 8mm; }
+        </style>
+      </head>
+      <body>
+        ${sheet.outerHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.addEventListener("load", () => {
+    printWindow.focus();
+    printWindow.print();
+  }, { once: true });
 }
 
 function resetConfigurationForModel() {
@@ -774,8 +812,8 @@ function restoreLocalState() {
     state.versions = saved.versions || {};
     state.changes = saved.changes || {};
     state.selectedModel = saved.selectedModel || "";
-    state.tftTab = ["mecanica", "tfts", "modulos"].includes(saved.tftTab) ? saved.tftTab : "mecanica";
-    state.ledTab = ["mecanica", "led", "modulos"].includes(saved.ledTab) ? saved.ledTab : "mecanica";
+    state.tftTab = ["mecanica", "tfts", "modulos", "ficha"].includes(saved.tftTab) ? saved.tftTab : "mecanica";
+    state.ledTab = ["mecanica", "led", "modulos", "ficha"].includes(saved.ledTab) ? saved.ledTab : "mecanica";
     const defaultConfig = { ...state.config };
     state.config = { ...state.config, ...(saved.config || {}) };
     if (state.config.tftSelectionMode === "Selección") state.config.tftSelectionMode = "Seleccionado";

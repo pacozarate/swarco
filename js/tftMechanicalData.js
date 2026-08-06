@@ -1,7 +1,8 @@
 export const tftTabs = [
   { id: "mecanica", label: "Mecánica" },
   { id: "tfts", label: "TFTs" },
-  { id: "modulos", label: "Módulos" }
+  { id: "modulos", label: "Módulos" },
+  { id: "ficha", label: "Ficha de producto" }
 ];
 
 export const tftClockPositionOptions = [
