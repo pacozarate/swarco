@@ -1,4 +1,4 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-38";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-39";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
@@ -227,11 +227,15 @@ function resolveEquipmentImage(state) {
 function selectRow(label, key, value, options, id, group) {
   const attr = group ? `data-option-group="${group.key}"` : `data-config="${key}"`;
   const elementId = id || "";
+  const normalizedOptions = options.filter((option) => option !== undefined && option !== null).map((option) => {
+    if (typeof option === "object") return option;
+    return { value: option, label: option };
+  });
   return `
     <div class="calc-row">
       <label>${label}</label>
       <select ${elementId ? `id="${elementId}"` : ""} ${attr}>
-        ${options.filter(Boolean).map((option) => `<option value="${option}" ${String(value) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+        ${normalizedOptions.map((option) => `<option value="${option.value}" ${String(value) === String(option.value) ? "selected" : ""}>${option.label}</option>`).join("")}
       </select>
     </div>
   `;

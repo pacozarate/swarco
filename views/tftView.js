@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260806-v4-1-38";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-38";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260806-v4-1-39";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-39";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
