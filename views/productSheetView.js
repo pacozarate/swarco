@@ -175,8 +175,8 @@ function bomPreviewSection(state) {
         <colgroup>
           <col style="width: 9%" />
           <col style="width: 24%" />
-          <col style="width: 8%" />
-          <col style="width: 59%" />
+          <col style="width: 15%" />
+          <col style="width: 25%" />
         </colgroup>
         <thead><tr><th>E+A</th><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
         <tbody>
