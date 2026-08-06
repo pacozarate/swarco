@@ -1478,13 +1478,18 @@ tr:last-child td {
 }
 
 .product-bom {
-  font-size: 8.4px;
+  font-size: 7.8px;
 }
 
 .product-bom th,
 .product-bom td {
-  padding: 3px 4px;
+  padding: 2.5px 3px;
   text-align: left;
+}
+
+.product-bom th:nth-child(2),
+.product-bom td:nth-child(2) {
+  text-align: center;
 }
 
 .product-bom th:nth-child(3),
