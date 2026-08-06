@@ -1349,7 +1349,9 @@ tr:last-child td {
   padding: 4px 6px;
   vertical-align: top;
   overflow-wrap: anywhere;
+  word-wrap: break-word;
   word-break: normal;
+  white-space: normal;
 }
 
 .product-calc-box th,
@@ -1375,6 +1377,20 @@ tr:last-child td {
 .product-meta-row strong {
   text-align: center;
   vertical-align: middle;
+}
+
+.product-label-cell {
+  text-align: left;
+}
+
+.product-value-cell {
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .product-description {
@@ -1406,8 +1422,10 @@ tr:last-child td {
 .product-section {
   display: grid;
   gap: 8px;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .product-section {

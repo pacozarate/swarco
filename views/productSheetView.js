@@ -44,7 +44,7 @@ export function productSheetView(state, technology) {
 
         <section class="product-description">
           <div class="product-section-title">Descripción</div>
-          <div class="product-description-box">${state.currentModel.longDescription || state.currentModel.description || ""}</div>
+          <div class="product-description-box">${escapeHtml(state.currentModel.longDescription || state.currentModel.description || "")}</div>
         </section>
 
         <div class="product-sheet-grid">
@@ -180,7 +180,7 @@ function bomPreviewSection(state) {
         </colgroup>
         <thead><tr><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
         <tbody>
-          ${rows.map((row) => `<tr><td>${row.description || "-"}</td><td>${row.code || "-"}</td><td>${row.quantity || 1}</td></tr>`).join("")}
+          ${rows.map((row) => `<tr><td>${cellText(row.description)}</td><td>${cellText(row.code)}</td><td>${cellText(row.quantity || 1)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>
@@ -213,14 +213,14 @@ function auxiliaryRows(state) {
 function sectionTable(title, rows) {
   return `
     <section class="product-section">
-      <div class="product-section-title">${title}</div>
+      <div class="product-section-title">${escapeHtml(title)}</div>
       <table class="product-table product-kv-table">
         <colgroup>
           <col style="width: 36%" />
           <col style="width: 64%" />
         </colgroup>
         <tbody>
-          ${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}
+          ${rows.map(([label, value]) => `<tr><th class="product-label-cell">${cellText(label)}</th><td class="product-value-cell">${cellText(value)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>
@@ -230,9 +230,9 @@ function sectionTable(title, rows) {
 function infoBlock(title, lines) {
   return `
     <section class="product-section">
-      <div class="product-section-title">${title}</div>
+      <div class="product-section-title">${escapeHtml(title)}</div>
       <div class="product-info-list">
-        ${lines.map((line) => `<p>${line}</p>`).join("")}
+        ${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
       </div>
     </section>
   `;
@@ -241,26 +241,40 @@ function infoBlock(title, lines) {
 function calcBox(title, rows) {
   return `
     <div class="product-calc-box">
-      <div class="product-calc-title">${title}</div>
+      <div class="product-calc-title">${escapeHtml(title)}</div>
       <table>
         <colgroup>
           <col style="width: 36%" />
           <col style="width: 64%" />
         </colgroup>
-        ${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}
+        ${rows.map(([label, value]) => `<tr><th class="product-label-cell">${cellText(label)}</th><td class="product-value-cell">${cellText(value)}</td></tr>`).join("")}
       </table>
     </div>
   `;
 }
 
 function metaRow(label, value) {
-  return `<div class="product-meta-row"><span>${label}</span><strong>${value}</strong></div>`;
+  return `<div class="product-meta-row"><span>${escapeHtml(label)}</span><strong>${cellText(value)}</strong></div>`;
 }
 
 function equipmentImage(state) {
   const model = state.currentModel?.model || state.selectedModel;
   const src = `equipment-images/${model}.PNG`;
-  return `<img src="${src}" alt="${state.currentModel?.description || model}" />`;
+  return `<img src="${src}" alt="${escapeHtml(state.currentModel?.description || model)}" />`;
+}
+
+function cellText(value) {
+  if (value === undefined || value === null || value === "") return "-";
+  return escapeHtml(value);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function selectedDescription(state, group) {
