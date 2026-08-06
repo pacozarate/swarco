@@ -174,9 +174,9 @@ function bomPreviewSection(state) {
       <table class="product-table product-bom">
         <colgroup>
           <col style="width: 9%" />
-          <col style="width: 47%" />
-          <col style="width: 25%" />
-          <col style="width: 19%" />
+          <col style="width: 24%" />
+          <col style="width: 8%" />
+          <col style="width: 59%" />
         </colgroup>
         <thead><tr><th>E+A</th><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
         <tbody>
