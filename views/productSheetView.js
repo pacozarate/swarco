@@ -174,8 +174,8 @@ function bomPreviewSection(state) {
       <div class="product-section-title green">E&A</div>
       <table class="product-table product-bom">
         <colgroup>
-          <col style="width: 58%" />
-          <col style="width: 30%" />
+          <col style="width: 54%" />
+          <col style="width: 34%" />
           <col style="width: 12%" />
         </colgroup>
         <thead><tr><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
@@ -214,15 +214,14 @@ function sectionTable(title, rows) {
   return `
     <section class="product-section">
       <div class="product-section-title">${escapeHtml(title)}</div>
-      <table class="product-table product-kv-table">
-        <colgroup>
-          <col style="width: 36%" />
-          <col style="width: 64%" />
-        </colgroup>
-        <tbody>
-          ${rows.map(([label, value]) => `<tr><th class="product-label-cell">${cellText(label)}</th><td class="product-value-cell">${cellText(value)}</td></tr>`).join("")}
-        </tbody>
-      </table>
+      <div class="product-kv-grid">
+        ${rows.map(([label, value]) => `
+          <div class="product-kv-row">
+            <div class="product-label-cell">${cellText(label)}</div>
+            <div class="product-value-cell">${cellText(value)}</div>
+          </div>
+        `).join("")}
+      </div>
     </section>
   `;
 }
@@ -242,13 +241,14 @@ function calcBox(title, rows) {
   return `
     <div class="product-calc-box">
       <div class="product-calc-title">${escapeHtml(title)}</div>
-      <table>
-        <colgroup>
-          <col style="width: 36%" />
-          <col style="width: 64%" />
-        </colgroup>
-        ${rows.map(([label, value]) => `<tr><th class="product-label-cell">${cellText(label)}</th><td class="product-value-cell">${cellText(value)}</td></tr>`).join("")}
-      </table>
+      <div class="product-calc-grid">
+        ${rows.map(([label, value]) => `
+          <div class="product-calc-row">
+            <div class="product-label-cell">${cellText(label)}</div>
+            <div class="product-value-cell">${cellText(value)}</div>
+          </div>
+        `).join("")}
+      </div>
     </div>
   `;
 }
