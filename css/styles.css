@@ -797,6 +797,15 @@ tr:last-child td {
   font-weight: 900;
 }
 
+.mechanical-config-card select[data-option-group],
+.led-mechanical-config-panel select[data-option-group] {
+  padding-left: 6px;
+  padding-right: 4px;
+  font-size: 11px;
+  line-height: 1.15;
+  font-weight: 750;
+}
+
 .compact-select {
   min-height: 28px;
   padding: 3px 6px;

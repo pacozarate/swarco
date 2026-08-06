@@ -1,6 +1,6 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-43";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-43";
-import { productSheetView } from "./productSheetView.js?v=20260806-v4-1-43";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-44";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-44";
+import { productSheetView } from "./productSheetView.js?v=20260806-v4-1-44";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
@@ -63,7 +63,7 @@ function mechanicalTab(state) {
   const image = resolveEquipmentImage(state);
   return `
     <div class="calc-grid">
-      <div class="panel">
+      <div class="panel led-mechanical-config-panel">
         <div class="panel-header"><h2>Mecanica - Configuracion</h2></div>
         <div class="panel-body calc-sheet">
           ${readRow("Familia", state.currentModel.description)}
