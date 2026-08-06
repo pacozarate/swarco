@@ -173,6 +173,11 @@ function bomPreviewSection(state) {
     <section class="product-section">
       <div class="product-section-title green">E&A</div>
       <table class="product-table product-bom">
+        <colgroup>
+          <col style="width: 58%" />
+          <col style="width: 30%" />
+          <col style="width: 12%" />
+        </colgroup>
         <thead><tr><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
         <tbody>
           ${rows.map((row) => `<tr><td>${row.description || "-"}</td><td>${row.code || "-"}</td><td>${row.quantity || 1}</td></tr>`).join("")}
@@ -210,6 +215,10 @@ function sectionTable(title, rows) {
     <section class="product-section">
       <div class="product-section-title">${title}</div>
       <table class="product-table product-kv-table">
+        <colgroup>
+          <col style="width: 36%" />
+          <col style="width: 64%" />
+        </colgroup>
         <tbody>
           ${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}
         </tbody>
@@ -233,7 +242,13 @@ function calcBox(title, rows) {
   return `
     <div class="product-calc-box">
       <div class="product-calc-title">${title}</div>
-      <table>${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}</table>
+      <table>
+        <colgroup>
+          <col style="width: 36%" />
+          <col style="width: 64%" />
+        </colgroup>
+        ${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}
+      </table>
     </div>
   `;
 }

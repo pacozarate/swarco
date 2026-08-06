@@ -1354,7 +1354,6 @@ tr:last-child td {
 
 .product-calc-box th,
 .product-kv-table th {
-  width: 42%;
   background: #8fbce3;
   font-weight: 800;
 }
@@ -1369,6 +1368,13 @@ tr:last-child td {
   background: #e3f4f4;
   text-align: center;
   font-weight: 600;
+}
+
+.product-kv-table td,
+.product-calc-box td,
+.product-meta-row strong {
+  text-align: center;
+  vertical-align: middle;
 }
 
 .product-description {
@@ -1388,7 +1394,7 @@ tr:last-child td {
 
 .product-sheet-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, calc(50% - 7px)) minmax(0, calc(50% - 7px));
   gap: 14px;
   margin-top: 14px;
   width: 100%;
