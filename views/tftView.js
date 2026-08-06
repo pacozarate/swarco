@@ -1,5 +1,5 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260731-v4-1-37";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260731-v4-1-37";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260806-v4-1-38";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-38";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -1031,9 +1031,16 @@ function groupSelect(group, state) {
     "1L": "Grupo 1L - Reloj"
   }[group.key] || `Grupo ${group.key} - ${group.label}`;
   const options = group.key === "1L"
-    ? [{ value: "", label: "Sin reloj" }, ...group.rows.map((row) => ({ value: row.code, label: row.code }))]
-    : group.rows.map((row) => row.code);
+    ? [{ value: "", label: "Sin reloj" }, ...group.rows.map(groupOption)]
+    : group.rows.map(groupOption);
   return selectRow(label, `group-${group.key}`, state.config.options[group.key], options, undefined, group);
+}
+
+function groupOption(row) {
+  return {
+    value: row.code,
+    label: row.description || row.longDescription || row.code
+  };
 }
 
 function clockPositionRow(state) {

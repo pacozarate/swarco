@@ -1,6 +1,6 @@
-import { normalizeRows } from "./normalizers.js?v=20260731-v4-1-37";
-import { makeVersion } from "./versioningEngine.js?v=20260731-v4-1-37";
-import { supabaseConfig } from "./supabaseConfig.js?v=20260731-v4-1-37";
+import { normalizeRows } from "./normalizers.js?v=20260806-v4-1-38";
+import { makeVersion } from "./versioningEngine.js?v=20260806-v4-1-38";
+import { supabaseConfig } from "./supabaseConfig.js?v=20260806-v4-1-38";
 
 export const tableDefinitions = [
   { key: "alart", label: "ALART" },

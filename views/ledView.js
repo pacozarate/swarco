@@ -1,4 +1,4 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260731-v4-1-37";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-38";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
@@ -192,7 +192,14 @@ function ledParametersTab(state, module, calc) {
 }
 
 function groupSelect(group, state) {
-  return selectRow(`Grupo ${group.key} - ${group.label}`, `group-${group.key}`, state.config.options[group.key], group.rows.map((row) => row.code), undefined, group);
+  return selectRow(`Grupo ${group.key} - ${group.label}`, `group-${group.key}`, state.config.options[group.key], group.rows.map(groupOption), undefined, group);
+}
+
+function groupOption(row) {
+  return {
+    value: row.code,
+    label: row.description || row.longDescription || row.code
+  };
 }
 
 function auxiliaries(state) {
