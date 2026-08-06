@@ -1,6 +1,6 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-52";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-52";
-import { productSheetView } from "./productSheetView.js?v=20260806-v4-1-52";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-53";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-53";
+import { productSheetView } from "./productSheetView.js?v=20260806-v4-1-53";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },

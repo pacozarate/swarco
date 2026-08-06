@@ -1487,13 +1487,12 @@ tr:last-child td {
   text-align: left;
 }
 
-.product-bom th:nth-child(2),
-.product-bom td:nth-child(2) {
-  text-align: center;
-}
-
+.product-bom th:nth-child(1),
+.product-bom td:nth-child(1),
 .product-bom th:nth-child(3),
-.product-bom td:nth-child(3) {
+.product-bom td:nth-child(3),
+.product-bom th:nth-child(4),
+.product-bom td:nth-child(4) {
   text-align: center;
 }
 

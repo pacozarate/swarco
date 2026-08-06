@@ -171,16 +171,16 @@ function bomPreviewSection(state) {
   const rows = selectedOptionRows(state).concat(auxiliaryRows(state));
   return `
     <section class="product-section">
-      <div class="product-section-title green">E&A</div>
       <table class="product-table product-bom">
         <colgroup>
-          <col style="width: 22%" />
-          <col style="width: 20%" />
-          <col style="width: 58%" />
+          <col style="width: 9%" />
+          <col style="width: 47%" />
+          <col style="width: 25%" />
+          <col style="width: 19%" />
         </colgroup>
-        <thead><tr><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
+        <thead><tr><th>E+A</th><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
         <tbody>
-          ${rows.map((row) => `<tr><td>${cellText(row.description)}</td><td>${cellText(row.code)}</td><td>${cellText(row.quantity || 1)}</td></tr>`).join("")}
+          ${rows.map((row) => `<tr><td>${cellText(row.type)}</td><td>${cellText(row.description)}</td><td>${cellText(row.code)}</td><td>${cellText(row.quantity || 1)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>
@@ -193,7 +193,7 @@ function selectedOptionRows(state) {
     const codes = Array.isArray(value) ? value : [value];
     return codes.filter(Boolean).map((code) => {
       const row = findModelRow(state, group, code);
-      return { code, description: row?.description || row?.longDescription || code, quantity: 1 };
+      return { type: "INCL", code, description: row?.description || row?.longDescription || code, quantity: 1 };
     });
   });
 }
@@ -203,6 +203,7 @@ function auxiliaryRows(state) {
   return codes.map((code) => {
     const row = findModelRow(state, "6", code);
     return {
+      type: "AUX",
       code,
       description: row?.description || row?.longDescription || code,
       quantity: state.config.auxiliaryQuantities?.[code] || 1
