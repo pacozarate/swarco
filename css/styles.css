@@ -1482,7 +1482,7 @@ tr:last-child td {
 
 .product-bom-row {
   display: grid;
-  grid-template-columns: 9fr 18fr 15fr 25fr;
+  grid-template-columns: 9fr 24fr 15fr 19fr;
   width: 100%;
   min-width: 0;
 }
