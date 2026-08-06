@@ -34,12 +34,12 @@ La aplicacion publicada funcionara desde una URL HTTPS sin necesidad de `start_b
 
 ## Version local consolidada
 
-La version local actual es `4.1.57` con build cache `20260806-v4-1-57`. La version se muestra en la cabecera de la aplicacion.
+La version local actual es `4.1.58` con build cache `20260806-v4-1-58`. La version se muestra en la cabecera de la aplicacion.
 
 Para evitar cache de modulos antiguos al probar cambios locales, abra:
 
 ```text
-http://127.0.0.1:4173/?fresh=20260806-v4-1-57
+http://127.0.0.1:4173/?fresh=20260806-v4-1-58
 ```
 
 El procedimiento completo esta en `docs/versionado_local.md`.
@@ -48,7 +48,7 @@ El procedimiento completo esta en `docs/versionado_local.md`.
 
 Los datos base estan en `data/`. Las tablas que el usuario cargue desde la pantalla `Tablas` se leen en el navegador y quedan en el almacenamiento local de ese equipo.
 
-La version `4.1.57` tambien puede leer las tablas filtradas desde Supabase. El frontend apunta al proyecto `swarco` (`https://qdmiyrwmeecchkowubqd.supabase.co`) mediante clave publica de navegador y mantiene los JSON locales como respaldo si Supabase no responde.
+La version `4.1.58` tambien puede leer las tablas filtradas desde Supabase. El frontend apunta al proyecto `swarco` (`https://qdmiyrwmeecchkowubqd.supabase.co`) mediante clave publica de navegador y mantiene los JSON locales como respaldo si Supabase no responde.
 
 ## Dataset pesado dbo_alhis
 

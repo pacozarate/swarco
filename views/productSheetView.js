@@ -171,18 +171,22 @@ function bomPreviewSection(state) {
   const rows = selectedOptionRows(state).concat(auxiliaryRows(state));
   return `
     <section class="product-section">
-      <table class="product-table product-bom">
-        <colgroup>
-          <col style="width: 13.43%" />
-          <col style="width: 26.87%" />
-          <col style="width: 22.39%" />
-          <col style="width: 37.31%" />
-        </colgroup>
-        <thead><tr><th>E+A</th><th>DESCRIPCION</th><th>CODIGO</th><th>Qty</th></tr></thead>
-        <tbody>
-          ${rows.map((row) => `<tr><td>${cellText(row.type)}</td><td>${cellText(row.description)}</td><td>${cellText(row.code)}</td><td>${cellText(row.quantity || 1)}</td></tr>`).join("")}
-        </tbody>
-      </table>
+      <div class="product-bom-grid">
+        <div class="product-bom-row product-bom-head">
+          <div>E+A</div>
+          <div>DESCRIPCION</div>
+          <div>CODIGO</div>
+          <div>Qty</div>
+        </div>
+        ${rows.map((row) => `
+          <div class="product-bom-row">
+            <div>${cellText(row.type)}</div>
+            <div>${cellText(row.description)}</div>
+            <div>${cellText(row.code)}</div>
+            <div>${cellText(row.quantity || 1)}</div>
+          </div>
+        `).join("")}
+      </div>
     </section>
   `;
 }
