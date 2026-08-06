@@ -15,7 +15,7 @@ export function productSheetView(state, technology) {
       <article class="product-sheet product-sheet-${theme}">
         <header class="product-sheet-top">
           <div class="product-brand">
-            <img src="brand-assets/swarco-logo-header.png" alt="Swarco" />
+            <img src="brand-assets/swarco-logo-product-gray.png" alt="Swarco" />
           </div>
           <h2>${title}</h2>
           <div class="product-meta">
