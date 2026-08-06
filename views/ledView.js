@@ -1,8 +1,10 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-39";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-40";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-40";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
-  { id: "led", label: "LED / Alimentación" }
+  { id: "led", label: "LED / Alimentación" },
+  { id: "modulos", label: "Módulos" }
 ];
 
 export function ledView(state) {
@@ -32,6 +34,7 @@ export function ledView(state) {
       <div class="tab-content">
         ${activeTab === "mecanica" ? mechanicalTab(state) : ""}
         ${activeTab === "led" ? ledParametersTab(state, module, calc) : ""}
+        ${activeTab === "modulos" ? modulesTab(state) : ""}
       </div>
     </section>
   `;
@@ -191,6 +194,193 @@ function ledParametersTab(state, module, calc) {
   `;
 }
 
+function modulesTab(state) {
+  const selectedModules = selectedModuleRows(state);
+  const moduleSummary = selectedModules
+    .filter((row) => String(row.group) !== "6")
+    .map((row) => moduleSummaryRow(row, state));
+  const auxiliarySummary = auxiliarySummaryRow(state);
+  if (auxiliarySummary) moduleSummary.push(auxiliarySummary);
+  return `
+    <article class="tech-card">
+      <header class="tech-card-header">A Modulos seleccionados</header>
+      <div class="tech-card-body">
+        ${moduleSummaryTable(moduleSummary)}
+      </div>
+    </article>
+
+    <article class="tech-card">
+      <header class="tech-card-header green">B Auxiliares</header>
+      <div class="tech-card-body">
+        ${auxiliariesTable(state)}
+      </div>
+    </article>
+  `;
+}
+
+function selectedModuleRows(state) {
+  const rows = [];
+  Object.entries(state.config.options || {}).forEach(([group, value]) => {
+    const codes = Array.isArray(value) ? value : [value];
+    codes.filter(Boolean).forEach((code) => {
+      const row = state.modelRows.find((item) => String(item.group).toUpperCase() === String(group).toUpperCase() && item.code === code);
+      if (row) rows.push(row);
+    });
+  });
+  return rows;
+}
+
+function moduleSummaryRow(moduleRow, state) {
+  const rows = explodeModule(moduleRow.root || moduleRow.code, state);
+  const summary = rows.reduce((sum, row) => {
+    const amount = rowCost(row.article, state.tables) * Number(row.quantity || 0);
+    const bucket = costBucket(row.article, state.tables);
+    if (bucket === "mec") sum.mec += amount;
+    else sum.noMec += amount;
+    return sum;
+  }, { noMec: 0, mec: 0 });
+  const total = summary.noMec + summary.mec;
+  return {
+    group: moduleRow.group,
+    code: moduleRow.code,
+    description: moduleRow.description || moduleRow.longDescription || "",
+    quantity: 1,
+    noMec: summary.noMec,
+    mec: summary.mec,
+    total
+  };
+}
+
+function moduleSummaryTable(rows) {
+  if (!rows.length) return `<div class="image-placeholder compact">No hay modulos seleccionados.</div>`;
+  const totals = rows.reduce((sum, row) => ({
+    noMec: sum.noMec + row.noMec,
+    mec: sum.mec + row.mec,
+    total: sum.total + row.total
+  }), { noMec: 0, mec: 0, total: 0 });
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>GRP</th><th>Codigo</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.group}</td>
+              <td>${row.code}</td>
+              <td>${row.description || "-"}</td>
+              <td class="numeric">${formatQuantity(row.quantity)}</td>
+              <td class="numeric">${formatCurrency(row.noMec)}</td>
+              <td class="numeric">${row.mec ? formatCurrency(row.mec) : "-"}</td>
+              <td class="numeric">${formatCurrency(row.total)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4">TOTAL</td><td class="numeric">${formatCurrency(totals.noMec)}</td><td class="numeric">${totals.mec ? formatCurrency(totals.mec) : "-"}</td><td class="numeric">${formatCurrency(totals.total)}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function auxiliarySummaryRow(state) {
+  const group = state.optionGroups.find((item) => item.key === "6");
+  if (!group) return null;
+  const selectedRows = new Set(Array.isArray(state.config.options["6"]) ? state.config.options["6"] : []);
+  const rows = group.rows.map((row) => auxiliaryCostRow(row, state, selectedRows.has(row.code))).filter((row) => row.selected);
+  if (!rows.length) return null;
+  const totals = rows.reduce((sum, row) => ({
+    quantity: sum.quantity + row.quantity,
+    noMec: sum.noMec + row.noMec,
+    mec: sum.mec + row.mec,
+    total: sum.total + row.total
+  }), { quantity: 0, noMec: 0, mec: 0, total: 0 });
+  return {
+    group: 6,
+    code: "AUXILIARES",
+    description: "Auxiliares seleccionados",
+    quantity: totals.quantity,
+    noMec: totals.noMec,
+    mec: totals.mec,
+    total: totals.total
+  };
+}
+
+function auxiliariesTable(state) {
+  const group = state.optionGroups.find((item) => item.key === "6");
+  if (!group) return `<div class="image-placeholder compact">Sin auxiliares disponibles.</div>`;
+  const selectedRows = new Set(Array.isArray(state.config.options["6"]) ? state.config.options["6"] : []);
+  const rows = group.rows.map((row) => auxiliaryCostRow(row, state, selectedRows.has(row.code)));
+  const totals = rows.reduce((sum, row) => ({
+    quantity: sum.quantity + (row.selected ? row.quantity : 0),
+    noMec: sum.noMec + row.noMec,
+    mec: sum.mec + row.mec,
+    total: sum.total + row.total
+  }), { quantity: 0, noMec: 0, mec: 0, total: 0 });
+  return `
+    <div class="data-table-wrapper">
+      <table class="data-table compact">
+        <thead>
+          <tr><th>Sel.</th><th>GRP</th><th>Codigo superior</th><th>Descripcion</th><th>Cantidad</th><th>noMec</th><th>mec</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr class="${row.selected ? "selected" : ""}">
+              <td><input type="checkbox" data-option-group="6" value="${row.code}" ${row.selected ? "checked" : ""} /></td>
+              <td>6</td>
+              <td>${row.parentCode}</td>
+              <td>${row.description || "-"}</td>
+              <td>${row.selected ? auxiliaryQuantitySelect(row.code, row.quantity) : "-"}</td>
+              <td class="numeric">${row.selected ? formatCurrency(row.noMec) : "-"}</td>
+              <td class="numeric">${row.selected && row.mec ? formatCurrency(row.mec) : "-"}</td>
+              <td class="numeric">${row.selected ? formatCurrency(row.total) : "-"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4">TOTAL</td><td class="numeric">${formatQuantity(totals.quantity)}</td><td class="numeric">${formatCurrency(totals.noMec)}</td><td class="numeric">${totals.mec ? formatCurrency(totals.mec) : "-"}</td><td class="numeric">${formatCurrency(totals.total)}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function auxiliaryCostRow(row, state, selectedRow) {
+  const quantity = auxiliaryQuantity(row.code, state);
+  const rows = explodeModule(row.root || row.code, state);
+  const summary = rows.reduce((sum, bomRow) => {
+    const amount = rowCost(bomRow.article, state.tables) * Number(bomRow.quantity || 0);
+    const bucket = costBucket(bomRow.article, state.tables);
+    if (bucket === "mec") sum.mec += amount;
+    else sum.noMec += amount;
+    return sum;
+  }, { noMec: 0, mec: 0 });
+  return {
+    selected: selectedRow,
+    code: row.code,
+    parentCode: row.root || row.code,
+    description: row.description || row.longDescription || "",
+    quantity,
+    noMec: selectedRow ? summary.noMec * quantity : 0,
+    mec: selectedRow ? summary.mec * quantity : 0,
+    total: selectedRow ? (summary.noMec + summary.mec) * quantity : 0
+  };
+}
+
+function auxiliaryQuantity(code, state) {
+  return sanitizeDisplayQuantity(state.config.auxiliaryQuantities?.[code] || 1);
+}
+
+function auxiliaryQuantitySelect(code, value) {
+  return `
+    <select class="form-select compact-select" data-aux-quantity="${code}">
+      ${Array.from({ length: 10 }, (_, index) => index + 1).map((quantity) => `<option value="${quantity}" ${Number(value) === quantity ? "selected" : ""}>${quantity}</option>`).join("")}
+    </select>
+  `;
+}
+
 function groupSelect(group, state) {
   return selectRow(`Grupo ${group.key} - ${group.label}`, `group-${group.key}`, state.config.options[group.key], group.rows.map(groupOption), undefined, group);
 }
@@ -268,4 +458,55 @@ function formatQuantity(value) {
 
 function selected(value, code) {
   return Array.isArray(value) ? value.includes(code) : value === code;
+}
+
+function sanitizeDisplayQuantity(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 1;
+  return Math.min(10, Math.max(1, Math.round(number)));
+}
+
+function explodeModule(root, state) {
+  if (!root) return [];
+  return explodeBom({ roots: [root], cplismatRows: state.tables.cplismat || [], maxLevel: 6 });
+}
+
+function costBucket(code, tables) {
+  const upperCode = String(code || "").toUpperCase();
+  const dv = articleDv(code, tables);
+  if (String(dv?.dva17 || "").trim().toUpperCase() === "MEC" || /AM\d+/.test(upperCode)) return "mec";
+  return "noMec";
+}
+
+function rowCost(code, tables) {
+  const lastPurchase = alartLastPurchaseCost(code, tables);
+  if (lastPurchase > 0) return lastPurchase;
+  const tariff = (tables.gcesp || [])
+    .filter((row) => row.code === code && Number(row.price) > 0)
+    .sort((a, b) => compareDateDesc(a.validFrom, b.validFrom))[0];
+  if (tariff) return Number(tariff.price) || 0;
+  const history = (tables.alhis || [])
+    .filter((row) => row.code === code && Number(row.quantity || 0) > 0 && Number(row.price || row.realCost || row.averageCost || 0) > 0)
+    .sort((a, b) => compareDateDesc(a.date, b.date))[0];
+  if (history) return Number(history.realCost || history.averageCost || history.price || 0) || 0;
+  return Number((tables.alart || []).find((row) => row.code === code)?.pmp || 0) || 0;
+}
+
+function alartLastPurchaseCost(code, tables) {
+  const article = (tables.alart || []).find((row) => row.code === code);
+  return Number(article?.pultcomp || 0) || 0;
+}
+
+function articleDv(code, tables) {
+  return (tables.alartdv || []).find((row) => row.code === code) || {};
+}
+
+function compareDateDesc(a, b) {
+  return new Date(b || 0).getTime() - new Date(a || 0).getTime();
+}
+
+function formatCurrency(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number);
 }
