@@ -1234,6 +1234,13 @@ tr:last-child td {
   height: auto;
 }
 
+.product-brand,
+.product-meta,
+.product-image-wrap,
+.product-calcs {
+  min-width: 0;
+}
+
 .product-sheet h2 {
   margin: 8px 0 0;
   text-align: center;
@@ -1308,7 +1315,9 @@ tr:last-child td {
 .product-calc-box table,
 .product-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .product-calc-box th,
@@ -1318,11 +1327,18 @@ tr:last-child td {
   border: 1px solid #fff;
   padding: 4px 6px;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .product-calc-box th,
-.product-table th {
+.product-kv-table th {
   width: 42%;
+  background: #8fbce3;
+  font-weight: 800;
+}
+
+.product-table th {
   background: #8fbce3;
   font-weight: 800;
 }
@@ -1357,6 +1373,8 @@ tr:last-child td {
 .product-section {
   display: grid;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .product-section {

@@ -209,7 +209,7 @@ function sectionTable(title, rows) {
   return `
     <section class="product-section">
       <div class="product-section-title">${title}</div>
-      <table class="product-table">
+      <table class="product-table product-kv-table">
         <tbody>
           ${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value || "-"}</td></tr>`).join("")}
         </tbody>
