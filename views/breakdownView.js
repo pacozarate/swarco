@@ -1,4 +1,4 @@
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-65";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-66";
 
 export function breakdownView(state, technology) {
   const data = buildBreakdownData(state, technology);

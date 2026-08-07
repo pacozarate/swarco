@@ -342,6 +342,69 @@ button:disabled {
   background: var(--ok);
 }
 
+.access-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.access-dialog {
+  width: min(440px, 100%);
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 22px 64px rgba(15, 23, 42, 0.28);
+}
+
+.access-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.access-dialog p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.access-password-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-weight: 800;
+}
+
+.access-password-field input {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.access-password-field input:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid rgba(0, 112, 184, 0.18);
+}
+
+.access-dialog-error {
+  margin: 8px 0 0;
+  color: var(--bad);
+  font-weight: 800;
+}
+
+.access-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .status-row,
 .card-grid {
   display: grid;

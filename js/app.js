@@ -1,32 +1,32 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-65";
-import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-65";
-import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-65";
-import { validateTables } from "./validators.js?v=20260807-v4-1-65";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-65";
-import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-65";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-65";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-65";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-65";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-65";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-65";
-import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-65";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-65";
-import { downloadCsv, downloadJson, downloadXlsx } from "./exportResults.js?v=20260807-v4-1-65";
-import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-65";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-65";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-65";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-65";
-import { tftView } from "../views/tftView.js?v=20260807-v4-1-65";
-import { ledView } from "../views/ledView.js?v=20260807-v4-1-65";
-import { buildBreakdownData } from "../views/breakdownView.js?v=20260807-v4-1-65";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-65";
-import { bomView } from "../views/bomView.js?v=20260807-v4-1-65";
-import { costingView } from "../views/costingView.js?v=20260807-v4-1-65";
-import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-65";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-66";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-66";
+import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-66";
+import { validateTables } from "./validators.js?v=20260807-v4-1-66";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-66";
+import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-66";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-66";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-66";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-66";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-66";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-66";
+import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-66";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-66";
+import { downloadCsv, downloadJson, downloadXlsx } from "./exportResults.js?v=20260807-v4-1-66";
+import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-66";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-66";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-66";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-66";
+import { tftView } from "../views/tftView.js?v=20260807-v4-1-66";
+import { ledView } from "../views/ledView.js?v=20260807-v4-1-66";
+import { buildBreakdownData } from "../views/breakdownView.js?v=20260807-v4-1-66";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-66";
+import { bomView } from "../views/bomView.js?v=20260807-v4-1-66";
+import { costingView } from "../views/costingView.js?v=20260807-v4-1-66";
+import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-66";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.65";
-const appBuild = "20260807-v4-1-65";
+const appVersion = "4.1.66";
+const appBuild = "20260807-v4-1-66";
 
 app.innerHTML = `
   <section class="screen">
@@ -130,6 +130,7 @@ const storageKey = "swarco-configurator-state-v7";
 const nuesoAccessPassword = "NUESO2026";
 const nuesoRoutes = ["maintenance", "model", "mechanics", "formulas", "bom", "costing"];
 let focusTftManualPriceAfterRender = false;
+let pendingRoleControl = null;
 const numericConfigLimits = {
   widthMm: { min: 1, max: 10000 },
   heightMm: { min: 1, max: 10000 },
@@ -299,18 +300,9 @@ function render() {
   bindHeader({
     setRole: (role, control) => {
       if (isNuesoRole(role)) {
-        const password = window.prompt("Introduzca clave NUESO para acceder como tecnico o administrador:");
-        if (password !== nuesoAccessPassword) {
-          window.alert("Clave incorrecta. Se mantiene el acceso de usuario normal.");
-          state.role = "consulta";
-          state.nuesoUnlocked = false;
-          state.route = "config";
-          if (control) control.value = state.role;
-          persistLocalState();
-          render();
-          return;
-        }
-        state.nuesoUnlocked = true;
+        if (control) control.value = state.role;
+        requestNuesoPassword(role, control);
+        return;
       } else {
         state.nuesoUnlocked = false;
         if (nuesoRoutes.includes(state.route)) state.route = "config";
@@ -323,6 +315,76 @@ function render() {
   });
   bindEvents(viewState);
   focusPendingControl();
+}
+
+function requestNuesoPassword(role, control) {
+  closeNuesoPasswordDialog();
+  pendingRoleControl = control || null;
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="access-dialog-backdrop" role="presentation">
+      <div class="access-dialog" role="dialog" aria-modal="true" aria-labelledby="accessDialogTitle">
+        <h2 id="accessDialogTitle">Clave NUESO</h2>
+        <p>Introduzca clave NUESO para acceder como tecnico o administrador.</p>
+        <label class="access-password-field">
+          <span>Clave</span>
+          <input id="nuesoPasswordInput" type="password" autocomplete="current-password" />
+        </label>
+        <div class="access-dialog-error" id="nuesoPasswordError" hidden>Clave incorrecta. Se mantiene el acceso de usuario normal.</div>
+        <div class="access-dialog-actions">
+          <button type="button" class="button ghost" id="cancelNuesoAccess">Cancelar</button>
+          <button type="button" class="button primary" id="confirmNuesoAccess">Aceptar</button>
+        </div>
+      </div>
+    </div>
+  `);
+  const input = document.querySelector("#nuesoPasswordInput");
+  const confirm = document.querySelector("#confirmNuesoAccess");
+  const cancel = document.querySelector("#cancelNuesoAccess");
+  const submit = () => confirmNuesoPassword(role, input?.value || "");
+  input?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submit();
+    if (event.key === "Escape") cancelNuesoPassword();
+  });
+  confirm?.addEventListener("click", submit);
+  cancel?.addEventListener("click", cancelNuesoPassword);
+  input?.focus();
+}
+
+function confirmNuesoPassword(role, password) {
+  if (password !== nuesoAccessPassword) {
+    const error = document.querySelector("#nuesoPasswordError");
+    const input = document.querySelector("#nuesoPasswordInput");
+    if (error) error.hidden = false;
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    state.role = "consulta";
+    state.nuesoUnlocked = false;
+    state.route = "config";
+    if (pendingRoleControl) pendingRoleControl.value = state.role;
+    persistLocalState();
+    return;
+  }
+  state.role = role;
+  state.nuesoUnlocked = true;
+  closeNuesoPasswordDialog();
+  persistLocalState();
+  render();
+}
+
+function cancelNuesoPassword() {
+  state.role = "consulta";
+  state.nuesoUnlocked = false;
+  state.route = "config";
+  if (pendingRoleControl) pendingRoleControl.value = state.role;
+  closeNuesoPasswordDialog();
+  persistLocalState();
+}
+
+function closeNuesoPasswordDialog() {
+  document.querySelector(".access-dialog-backdrop")?.remove();
+  pendingRoleControl = null;
 }
 
 function renderRoute(viewState) {
