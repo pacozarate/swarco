@@ -1175,6 +1175,30 @@ tr:last-child td {
   margin: 0 0 12px;
 }
 
+.lot-reference-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 12px;
+  padding: 6px 10px;
+  background: #eef4f8;
+  border: 1px solid var(--color-border);
+  color: #1f2f3d;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lot-reference-bar strong {
+  min-width: 64px;
+  padding: 4px 10px;
+  background: #fff7cc;
+  border: 1px solid #e2b300;
+  border-radius: 4px;
+  color: #9a6400;
+  text-align: center;
+}
+
 .product-zoom-controls {
   display: inline-flex;
   align-items: center;
@@ -1582,7 +1606,7 @@ tr:last-child td {
 
 .breakdown-model {
   display: grid;
-  grid-template-columns: 70px 1fr;
+  grid-template-columns: minmax(82px, 0.9fr) minmax(0, 1fr);
   gap: 4px 8px;
   align-items: center;
 }

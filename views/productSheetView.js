@@ -21,6 +21,7 @@ export function productSheetView(state, technology) {
           <div class="product-meta">
             ${metaRow("FECHA", shortDate())}
             ${metaRow("Version Herramienta", state.appBuild || "-")}
+            ${metaRow("Cantidad | Lote", lotQuantity(state, isLed))}
           </div>
         </header>
 
@@ -65,8 +66,10 @@ export function productSheetView(state, technology) {
 }
 
 function productSpecRows(state) {
+  const isLed = state.currentModel?.technology === "LED";
   return [
     ["Familia", state.currentModel.description],
+    ["Cantidad | Lote", lotQuantity(state, isLed)],
     ["BASTIDOR", selectedDescription(state, "1")],
     ["PUERTA", selectedDescription(state, "2")],
     ["IP", selectedDescription(state, "3")],
@@ -76,6 +79,10 @@ function productSpecRows(state) {
     ["Reloj", selectedDescription(state, "1L") || "-"],
     ["Posición Reloj", state.config.tftClockPosition || "-"]
   ].filter((row) => row[1] !== undefined && row[1] !== "");
+}
+
+function lotQuantity(state, isLed) {
+  return isLed ? state.config.ledQuantity || 0 : state.config.tftQuantity || 0;
 }
 
 function productMechanicRows(state, isLed) {

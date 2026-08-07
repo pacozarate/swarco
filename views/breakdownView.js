@@ -1,4 +1,4 @@
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-64";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-65";
 
 export function breakdownView(state, technology) {
   const data = buildBreakdownData(state, technology);
@@ -21,6 +21,7 @@ export function breakdownView(state, technology) {
         <div class="breakdown-model">
           <span>FAMILIA</span><strong>${escapeHtml(data.family || "-")}</strong>
           <span>MODELO</span><strong>${escapeHtml(data.model || "-")}</strong>
+          <span>CANTIDAD | LOTE</span><strong>${escapeHtml(formatQuantity(data.lotQuantity || 0))}</strong>
         </div>
       </header>
 
@@ -64,6 +65,7 @@ export function buildBreakdownData(state, technology) {
     isLed,
     family: state.currentModel?.description || "",
     model: state.selectedModel || "",
+    lotQuantity: isLed ? state.config.ledQuantity || 0 : state.config.tftQuantity || 0,
     selectedModules,
     moduleRows,
     auxRows,

@@ -1,7 +1,7 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260807-v4-1-64";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-64";
-import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-64";
-import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-64";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260807-v4-1-65";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-65";
+import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-65";
+import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-65";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
@@ -26,6 +26,7 @@ export function ledView(state) {
       </div>
 
       ${familySelector(state)}
+      ${lotReferenceBar(state)}
 
       <nav class="config-tabs" role="tablist" aria-label="Configuracion LED">
         ${ledTabs.map((tab) => `
@@ -62,6 +63,15 @@ function familySelector(state) {
   `;
 }
 
+function lotReferenceBar(state) {
+  return `
+    <div class="lot-reference-bar">
+      <span>Cantidad | Lote</span>
+      <strong>${formatQuantity(state.config.ledQuantity || 0)}</strong>
+    </div>
+  `;
+}
+
 function mechanicalTab(state) {
   const image = resolveEquipmentImage(state);
   return `
@@ -78,7 +88,7 @@ function mechanicalTab(state) {
           ${numberRow("Alto mecanica Manual", "ledManualHeightMm", state.config.ledManualHeightMm, 1, 9999)}
           ${selectRow("Material", "ledMaterial", state.config.ledMaterial, ["ALU", "GALVA"])}
           ${selectRow("Espesor Chapa", "tftSheetThicknessMm", state.config.tftSheetThicknessMm, sheetThicknessOptions())}
-          ${numberRow("Cantidad", "ledQuantity", state.config.ledQuantity, 1, 9999)}
+          ${numberRow("Cantidad | Lote", "ledQuantity", state.config.ledQuantity, 1, 9999)}
         </div>
       </div>
 

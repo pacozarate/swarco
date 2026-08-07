@@ -1,32 +1,32 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-64";
-import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-64";
-import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-64";
-import { validateTables } from "./validators.js?v=20260807-v4-1-64";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-64";
-import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-64";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-64";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-64";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-64";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-64";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-64";
-import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-64";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-64";
-import { downloadCsv, downloadJson, downloadXlsx } from "./exportResults.js?v=20260807-v4-1-64";
-import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-64";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-64";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-64";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-64";
-import { tftView } from "../views/tftView.js?v=20260807-v4-1-64";
-import { ledView } from "../views/ledView.js?v=20260807-v4-1-64";
-import { buildBreakdownData } from "../views/breakdownView.js?v=20260807-v4-1-64";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-64";
-import { bomView } from "../views/bomView.js?v=20260807-v4-1-64";
-import { costingView } from "../views/costingView.js?v=20260807-v4-1-64";
-import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-64";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-65";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-65";
+import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-65";
+import { validateTables } from "./validators.js?v=20260807-v4-1-65";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-65";
+import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-65";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-65";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-65";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-65";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-65";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-65";
+import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-65";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-65";
+import { downloadCsv, downloadJson, downloadXlsx } from "./exportResults.js?v=20260807-v4-1-65";
+import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-65";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-65";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-65";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-65";
+import { tftView } from "../views/tftView.js?v=20260807-v4-1-65";
+import { ledView } from "../views/ledView.js?v=20260807-v4-1-65";
+import { buildBreakdownData } from "../views/breakdownView.js?v=20260807-v4-1-65";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-65";
+import { bomView } from "../views/bomView.js?v=20260807-v4-1-65";
+import { costingView } from "../views/costingView.js?v=20260807-v4-1-65";
+import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-65";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.64";
-const appBuild = "20260807-v4-1-64";
+const appVersion = "4.1.65";
+const appBuild = "20260807-v4-1-65";
 
 app.innerHTML = `
   <section class="screen">
@@ -637,7 +637,7 @@ function exportBreakdownPdf() {
           .breakdown-top { grid-template-columns: 42mm 1fr 58mm; gap: 3mm; margin-bottom: 2mm; }
           .breakdown-top img { max-width: 34mm; }
           .breakdown-top h2 { font-size: 11px; margin-top: 2mm; }
-          .breakdown-model { grid-template-columns: 17mm 1fr; gap: 1mm 2mm; }
+          .breakdown-model { grid-template-columns: 28mm 1fr; gap: 1mm 2mm; }
           .breakdown-model span { font-size: 5.8px; }
           .breakdown-model strong { font-size: 7px; }
           .breakdown-layout { grid-template-columns: minmax(0, 1fr) 58mm; gap: 3mm; overflow: hidden; }
@@ -674,6 +674,7 @@ function breakdownExcelRows(data) {
     ["DESGLOSE", data.technology],
     ["FAMILIA", data.family || "-"],
     ["MODELO", data.model || "-"],
+    ["CANTIDAD | LOTE", excelNumber(data.lotQuantity || 0)],
     ["COSTE TOTAL", moneyNumber(data.totalCost)],
     []
   ];

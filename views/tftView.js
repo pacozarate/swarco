@@ -1,7 +1,7 @@
-import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260807-v4-1-64";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-64";
-import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-64";
-import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-64";
+import { equipmentImages, tftClockPositionOptions, tftTabs } from "../js/tftMechanicalData.js?v=20260807-v4-1-65";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-65";
+import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-65";
+import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-65";
 
 export function tftView(state) {
   const activeTab = tftTabs.some((tab) => tab.id === state.tftTab) ? state.tftTab : "mecanica";
@@ -16,6 +16,7 @@ export function tftView(state) {
       </div>
 
       ${familySelector(state)}
+      ${lotReferenceBar(state)}
 
       <nav class="config-tabs" role="tablist" aria-label="Configuracion TFT">
         ${tftTabs.map((tab) => `
@@ -52,6 +53,15 @@ function familySelector(state) {
   `;
 }
 
+function lotReferenceBar(state) {
+  return `
+    <div class="lot-reference-bar">
+      <span>Cantidad | Lote</span>
+      <strong>${formatQuantity(state.config.tftQuantity || 0)}</strong>
+    </div>
+  `;
+}
+
 function mechanicalTab(state) {
   const image = resolveEquipmentImage(state);
   return `
@@ -79,12 +89,12 @@ function mechanicalTab(state) {
       </article>
 
       <article class="tech-card mechanical-material-card">
-        <header class="tech-card-header green">Material / Peso / Cantidad</header>
+        <header class="tech-card-header green">Material / Peso / Cantidad | Lote</header>
         <div class="tech-card-body">
           <div class="form-grid">
             ${selectRow("Material", "tftMaterial", state.config.tftMaterial, ["GALVA", "ALU", "INOX"])}
             ${readRow("Peso Mecanica", `${state.mechanics.mechanicalWeightKg || 0} kg`, "calculated critical")}
-            ${numberRow("Cantidad", "tftQuantity", state.config.tftQuantity, 1, 9999, 1, "critical")}
+            ${numberRow("Cantidad | Lote", "tftQuantity", state.config.tftQuantity, 1, 9999, 1, "critical")}
           </div>
           <div class="material-summary-grid">
             <div class="kpi-box">
@@ -92,7 +102,7 @@ function mechanicalTab(state) {
               <div class="kpi-value">${state.mechanics.mechanicalWeightKg || 0} kg</div>
             </div>
             <div class="kpi-box">
-              <div class="kpi-label">Cantidad</div>
+              <div class="kpi-label">Cantidad | Lote</div>
               <div class="kpi-value warning">${state.config.tftQuantity || 0}</div>
             </div>
           </div>
