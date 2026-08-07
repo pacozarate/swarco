@@ -1,4 +1,4 @@
-import { buildFormulaContext, evaluateFormula, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-62";
+import { buildFormulaContext, evaluateFormula, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-63";
 
 export function calculateMechanics(input, tables) {
   const rule = tables.mecanica.find((row) => row.model === input.model && String(row.technology).toUpperCase() === input.technology)

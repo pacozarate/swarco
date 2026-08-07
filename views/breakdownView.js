@@ -338,9 +338,14 @@ function sideTable(title, rows) {
   return `
     <section class="breakdown-side-card">
       <h3>${escapeHtml(title)}</h3>
-      <table class="breakdown-table">
-        <tbody>${rows.map(([label, value]) => `<tr><th>${cell(label)}</th><td>${cell(value)}</td></tr>`).join("")}</tbody>
-      </table>
+      <div class="breakdown-side-grid">
+        ${rows.map(([label, value]) => `
+          <div class="breakdown-side-row">
+            <div class="breakdown-side-label">${cell(label)}</div>
+            <div class="breakdown-side-value">${cell(value)}</div>
+          </div>
+        `).join("")}
+      </div>
     </section>
   `;
 }
