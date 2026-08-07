@@ -1522,6 +1522,157 @@ tr:last-child td {
   margin: 0 0 9px;
 }
 
+.breakdown-sheet {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px;
+  background: #fff1d6;
+  border: 1px solid #d7dde3;
+  box-shadow: var(--shadow-card);
+  color: #111827;
+  font-size: 10px;
+}
+
+.breakdown-top {
+  display: grid;
+  grid-template-columns: 180px 1fr 310px;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.breakdown-top img {
+  max-width: 150px;
+  height: auto;
+}
+
+.breakdown-top h2 {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.breakdown-model {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.breakdown-model span {
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.breakdown-model strong {
+  color: #0087bd;
+  font-size: 13px;
+}
+
+.breakdown-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 14px;
+  align-items: start;
+}
+
+.breakdown-main,
+.breakdown-side {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.breakdown-block,
+.breakdown-side-card {
+  min-width: 0;
+}
+
+.breakdown-block h3,
+.breakdown-side-card h3 {
+  margin: 0;
+  padding: 4px 6px;
+  background: #4f7f2b;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.breakdown-side-card h3 {
+  background: #f28c00;
+}
+
+.breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.breakdown-table th,
+.breakdown-table td {
+  padding: 3px 4px;
+  border: 1px solid #111827;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.breakdown-table th {
+  background: #4f7f2b;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.breakdown-table td {
+  background: #e3f4f4;
+  font-size: 8.4px;
+  font-weight: 650;
+}
+
+.breakdown-table tfoot td {
+  background: #dce8f4;
+  font-weight: 900;
+  text-align: right;
+}
+
+.breakdown-summary-table th,
+.breakdown-summary-table td {
+  text-align: center;
+}
+
+.breakdown-summary-table td:nth-child(3) {
+  text-align: left;
+}
+
+.breakdown-side-card .breakdown-table th {
+  width: 48%;
+  background: #8fbce3;
+  color: #64717d;
+  text-align: left;
+}
+
+.breakdown-side-card .breakdown-table td {
+  text-align: center;
+}
+
+.breakdown-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 14px;
+  font-weight: 900;
+}
+
+.breakdown-footer span {
+  min-width: 120px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #111827;
+  text-align: right;
+}
+
 @media print {
   body * {
     visibility: hidden;

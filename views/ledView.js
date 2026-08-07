@@ -1,12 +1,14 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260806-v4-1-61";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-61";
-import { productSheetView } from "./productSheetView.js?v=20260806-v4-1-61";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260807-v4-1-62";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-62";
+import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-62";
+import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-62";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
   { id: "led", label: "LED / Alimentación" },
   { id: "modulos", label: "Módulos" },
-  { id: "ficha", label: "Ficha de producto" }
+  { id: "ficha", label: "Ficha de producto" },
+  { id: "desglose", label: "Desglose" }
 ];
 
 export function ledView(state) {
@@ -38,6 +40,7 @@ export function ledView(state) {
         ${activeTab === "led" ? ledParametersTab(state, module, calc) : ""}
         ${activeTab === "modulos" ? modulesTab(state) : ""}
         ${activeTab === "ficha" ? productSheetView(state, "LED") : ""}
+        ${activeTab === "desglose" ? breakdownView(state, "LED") : ""}
       </div>
     </section>
   `;
