@@ -1,4 +1,4 @@
-import { tableDefinitions } from "../js/importExcel.js?v=20260807-v4-1-63";
+import { tableDefinitions } from "../js/importExcel.js?v=20260807-v4-1-64";
 
 export function maintenanceView(state) {
   return `

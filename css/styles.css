@@ -1533,6 +1533,33 @@ tr:last-child td {
   font-size: 10px;
 }
 
+.breakdown-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.breakdown-export-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.breakdown-export-controls label {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.breakdown-export-controls select {
+  min-width: 120px;
+}
+
 .breakdown-top {
   display: grid;
   grid-template-columns: 180px 1fr 310px;
@@ -1717,12 +1744,15 @@ tr:last-child td {
     visibility: hidden;
   }
 
-  .product-actions {
+  .product-actions,
+  .breakdown-actions {
     display: none !important;
   }
 
   .product-sheet,
-  .product-sheet * {
+  .product-sheet *,
+  .breakdown-sheet,
+  .breakdown-sheet * {
     visibility: visible;
   }
 
@@ -1740,6 +1770,33 @@ tr:last-child td {
     font-size: 7.2px;
     overflow: hidden;
     page-break-after: avoid;
+  }
+
+  .breakdown-sheet {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 194mm;
+    max-width: 194mm;
+    margin: 0;
+    padding: 3mm;
+    box-shadow: none;
+    border: 0;
+    font-size: 5.8px;
+    overflow: hidden;
+    page-break-after: avoid;
+  }
+
+  .breakdown-layout {
+    grid-template-columns: minmax(0, 1fr) 45mm;
+    gap: 2mm;
+  }
+
+  .breakdown-table th,
+  .breakdown-table td,
+  .breakdown-side-label,
+  .breakdown-side-value {
+    padding: 0.6mm 0.8mm;
+    font-size: 5px;
   }
 
   .product-sheet-top {

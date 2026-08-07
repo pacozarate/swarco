@@ -5,8 +5,8 @@ Para evitar que el navegador abra una mezcla de ficheros antiguos y nuevos, cada
 Version actual:
 
 ```text
-Version funcional: 4.1.63
-Build cache: 20260807-v4-1-63
+Version funcional: 4.1.64
+Build cache: 20260807-v4-1-64
 ```
 
 ## Donde se aplica
@@ -25,7 +25,7 @@ La version funcional se muestra en la cabecera de la aplicacion:
 
 ```text
 Configurador SWARCO
-NUESO TECH / NUESO GROUP · v4.1.63
+NUESO TECH / NUESO GROUP · v4.1.64
 ```
 
 ## Regla operativa
@@ -37,7 +37,7 @@ Cada vez que se consolide una version visible para pruebas:
 3. Recargar local con una URL nueva, por ejemplo:
 
 ```text
-http://127.0.0.1:4173/?fresh=20260807-v4-1-63
+http://127.0.0.1:4173/?fresh=20260807-v4-1-64
 ```
 
 4. Cerrar pestanas antiguas del navegador o usar recarga fuerte.

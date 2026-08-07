@@ -1,31 +1,32 @@
-import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-63";
-import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-63";
-import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-63";
-import { validateTables } from "./validators.js?v=20260807-v4-1-63";
-import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-63";
-import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-63";
-import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-63";
-import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-63";
-import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-63";
-import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-63";
-import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-63";
-import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-63";
-import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-63";
-import { downloadCsv, downloadJson } from "./exportResults.js?v=20260807-v4-1-63";
-import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-63";
-import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-63";
-import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-63";
-import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-63";
-import { tftView } from "../views/tftView.js?v=20260807-v4-1-63";
-import { ledView } from "../views/ledView.js?v=20260807-v4-1-63";
-import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-63";
-import { bomView } from "../views/bomView.js?v=20260807-v4-1-63";
-import { costingView } from "../views/costingView.js?v=20260807-v4-1-63";
-import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-63";
+import { can, isNuesoRole, ROLES } from "./authEngine.js?v=20260807-v4-1-64";
+import { loadTableData, readWorkbookFile } from "./importExcel.js?v=20260807-v4-1-64";
+import { detectChange } from "./changeDetectionEngine.js?v=20260807-v4-1-64";
+import { validateTables } from "./validators.js?v=20260807-v4-1-64";
+import { getAllModelRoots, getDefaultConfiguration, getModelTrl, getModels, getOptionsByGroup, selectedRoots } from "./trlEngine.js?v=20260807-v4-1-64";
+import { getTftDetails } from "./tftDataEngine.js?v=20260807-v4-1-64";
+import { calculateLedPanel } from "./ledCalculationEngine.js?v=20260807-v4-1-64";
+import { calculateMechanics } from "./mechanicsEngine.js?v=20260807-v4-1-64";
+import { getMechanicalSubassemblies } from "./mechanicalSubassembliesEngine.js?v=20260807-v4-1-64";
+import { explodeBom } from "./bomExplosionEngine.js?v=20260807-v4-1-64";
+import { consolidateBom } from "./bomConsolidationEngine.js?v=20260807-v4-1-64";
+import { calculateCosts } from "./costingEngine.js?v=20260807-v4-1-64";
+import { defaultFormulas, formulaContextRows, mergeFormulas } from "./formulaEngine.js?v=20260807-v4-1-64";
+import { downloadCsv, downloadJson, downloadXlsx } from "./exportResults.js?v=20260807-v4-1-64";
+import { renderSidebar } from "./appRouter.js?v=20260807-v4-1-64";
+import { bindHeader, renderHeader } from "../views/commonHeader.js?v=20260807-v4-1-64";
+import { maintenanceView } from "../views/maintenanceView.js?v=20260807-v4-1-64";
+import { modelSelectionView } from "../views/modelSelectionView.js?v=20260807-v4-1-64";
+import { tftView } from "../views/tftView.js?v=20260807-v4-1-64";
+import { ledView } from "../views/ledView.js?v=20260807-v4-1-64";
+import { buildBreakdownData } from "../views/breakdownView.js?v=20260807-v4-1-64";
+import { mechanicsView } from "../views/mechanicsView.js?v=20260807-v4-1-64";
+import { bomView } from "../views/bomView.js?v=20260807-v4-1-64";
+import { costingView } from "../views/costingView.js?v=20260807-v4-1-64";
+import { formulasView } from "../views/formulasView.js?v=20260807-v4-1-64";
 
 const app = document.querySelector("#app");
-const appVersion = "4.1.63";
-const appBuild = "20260807-v4-1-63";
+const appVersion = "4.1.64";
+const appBuild = "20260807-v4-1-64";
 
 app.innerHTML = `
   <section class="screen">
@@ -366,6 +367,15 @@ function bindEvents(viewState) {
   document.querySelector("#exportProductPdf")?.addEventListener("click", () => {
     exportProductSheetPdf();
   });
+  document.querySelector("#exportBreakdown")?.addEventListener("click", () => {
+    const format = document.querySelector("#breakdownExportFormat")?.value || "pdf";
+    try {
+      if (format === "excel") exportBreakdownExcel(viewState);
+      else exportBreakdownPdf();
+    } catch (error) {
+      alert(error.message || "No se pudo exportar el desglose.");
+    }
+  });
   document.querySelectorAll("[data-product-zoom]").forEach((button) => {
     button.addEventListener("click", () => {
       const stage = document.querySelector(".product-sheet-stage");
@@ -602,6 +612,202 @@ function exportProductSheetPdf() {
     printWindow.focus();
     printWindow.print();
   }, { once: true });
+}
+
+function exportBreakdownPdf() {
+  const sheet = document.querySelector(".breakdown-sheet");
+  if (!sheet) return;
+  const printWindow = window.open("", "_blank", "width=1200,height=900");
+  if (!printWindow) {
+    window.print();
+    return;
+  }
+  const title = `${state.selectedModel || "SWARCO"} - desglose`;
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="es">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <link rel="stylesheet" href="css/styles.css?v=${appBuild}" />
+        <style>
+          body { margin: 0; background: #fff; }
+          .breakdown-actions, .product-actions, .topbar, .sidebar, .module-header, .config-tabs { display: none !important; }
+          .breakdown-sheet { width: 281mm; max-width: 281mm; margin: 0; padding: 3mm; box-shadow: none; border: 0; font-size: 6.2px; overflow: hidden; }
+          .breakdown-top { grid-template-columns: 42mm 1fr 58mm; gap: 3mm; margin-bottom: 2mm; }
+          .breakdown-top img { max-width: 34mm; }
+          .breakdown-top h2 { font-size: 11px; margin-top: 2mm; }
+          .breakdown-model { grid-template-columns: 17mm 1fr; gap: 1mm 2mm; }
+          .breakdown-model span { font-size: 5.8px; }
+          .breakdown-model strong { font-size: 7px; }
+          .breakdown-layout { grid-template-columns: minmax(0, 1fr) 58mm; gap: 3mm; overflow: hidden; }
+          .breakdown-main, .breakdown-side { gap: 2mm; }
+          .breakdown-block h3, .breakdown-side-card h3 { padding: 1mm 1.2mm; font-size: 6px; }
+          .breakdown-table th, .breakdown-table td, .breakdown-side-label, .breakdown-side-value { padding: 0.7mm 0.9mm; font-size: 5.5px; line-height: 1.15; }
+          .breakdown-side-row { grid-template-columns: minmax(0, 48%) minmax(0, 52%); }
+          .breakdown-footer { margin-top: 3mm; gap: 3mm; }
+          .breakdown-footer span { min-width: 32mm; padding: 1.2mm 2mm; }
+          @page { size: A4 landscape; margin: 6mm; }
+        </style>
+      </head>
+      <body>
+        ${sheet.outerHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.addEventListener("load", () => {
+    printWindow.focus();
+    printWindow.print();
+  }, { once: true });
+}
+
+function exportBreakdownExcel(viewState) {
+  const technology = viewState.currentModel?.technology || "TFT";
+  const data = buildBreakdownData(viewState, technology);
+  const fileName = safeFileName(`desglose-${technology}-${viewState.selectedModel || "swarco"}.xlsx`);
+  downloadXlsx(fileName, [{ name: "Desglose", rows: breakdownExcelRows(data) }]);
+}
+
+function breakdownExcelRows(data) {
+  const rows = [
+    ["DESGLOSE", data.technology],
+    ["FAMILIA", data.family || "-"],
+    ["MODELO", data.model || "-"],
+    ["COSTE TOTAL", moneyNumber(data.totalCost)],
+    []
+  ];
+
+  appendSection(rows, "A - MODULOS", moduleExcelHeaders(data.isLed), moduleExcelRows(data));
+  appendSection(rows, "EXCLUIDAS", ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "PRECIO", "TOTAL"], simpleExcelRows(data.excludedRows));
+  appendSection(rows, "INCLUIDOS", ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "PRECIO", "TOTAL"], simpleExcelRows(data.includedRows));
+  appendSection(rows, "AUXILIARES", ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "PRECIO", "TOTAL"], simpleExcelRows(data.auxRows));
+  appendSection(rows, data.isLed ? "VIDRIO / PC" : "GLASS", ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "AREA VISIBLE (M2)", "EUR/M2", "TOTAL"], glassExcelRows(data.glassRows));
+  appendSection(rows, "MECANICA", ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "MATERIAL", "PESO", "COSTE EST.", "TOTAL"], mechanicalExcelRows(data.mechanicalRows));
+  data.sideCards.forEach((card) => appendSection(rows, card.title, ["CAMPO", "VALOR"], card.rows));
+
+  return rows;
+}
+
+function appendSection(rows, title, headers, bodyRows) {
+  rows.push([title], headers);
+  if (bodyRows.length) rows.push(...bodyRows);
+  else rows.push(["NO"]);
+  rows.push([]);
+}
+
+function moduleExcelHeaders(isLed) {
+  return isLed
+    ? ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "NOMEC", "MEC", "FA", "VIDRIO | PC", "MODULOS LED", "TOTAL", "%"]
+    : ["GRP", "CODIGO", "DESCRIPCION", "CANTIDAD", "NOMEC", "MEC", "VIDRIO | PC", "SUBTOTAL", "TFT", "TOTAL", "%"];
+}
+
+function moduleExcelRows(data) {
+  return data.moduleRows.map((row) => {
+    const percent = data.totals.total > 0 ? `${Math.round((row.total / data.totals.total) * 100)}%` : "0%";
+    if (data.isLed) {
+      return [
+        row.group,
+        row.code,
+        row.description,
+        excelNumber(row.quantity),
+        moneyNumber(row.noMec),
+        moneyNumber(row.mec),
+        moneyNumber(row.fa),
+        moneyNumber(row.glassPc),
+        moneyNumber(row.ledModules),
+        moneyNumber(row.total),
+        percent
+      ];
+    }
+    return [
+      row.group,
+      row.code,
+      row.description,
+      excelNumber(row.quantity),
+      moneyNumber(row.noMec),
+      moneyNumber(row.mec),
+      moneyNumber(row.glassPc),
+      moneyNumber(row.subtotal),
+      moneyNumber(row.tft),
+      moneyNumber(row.total),
+      percent
+    ];
+  }).concat([moduleTotalsExcelRow(data)]);
+}
+
+function moduleTotalsExcelRow(data) {
+  if (data.isLed) {
+    return [
+      "TOTAL", "", "", "",
+      moneyNumber(data.totals.noMec),
+      moneyNumber(data.totals.mec),
+      moneyNumber(data.totals.fa),
+      moneyNumber(data.totals.glassPc),
+      moneyNumber(data.totals.ledModules),
+      moneyNumber(data.totals.total),
+      "100%"
+    ];
+  }
+  return [
+    "TOTAL", "", "", "",
+    moneyNumber(data.totals.noMec),
+    moneyNumber(data.totals.mec),
+    moneyNumber(data.totals.glassPc),
+    moneyNumber(data.totals.subtotal),
+    moneyNumber(data.totals.tft),
+    moneyNumber(data.totals.total),
+    "100%"
+  ];
+}
+
+function simpleExcelRows(rows) {
+  return rows.map((row) => [
+    row.group,
+    row.code,
+    row.description,
+    excelNumber(row.quantity),
+    moneyNumber(row.unitPrice),
+    moneyNumber(row.total)
+  ]);
+}
+
+function glassExcelRows(rows) {
+  return rows.map((row) => [
+    row.group,
+    row.code,
+    row.description,
+    excelNumber(row.quantity),
+    excelNumber(row.visibleArea),
+    moneyNumber(row.priceM2),
+    moneyNumber(row.total)
+  ]);
+}
+
+function mechanicalExcelRows(rows) {
+  return rows.map((row) => [
+    row.group,
+    row.code,
+    row.description,
+    excelNumber(row.quantity),
+    row.material,
+    excelNumber(row.weight),
+    moneyNumber(row.unitPrice),
+    moneyNumber(row.total)
+  ]);
+}
+
+function moneyNumber(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function excelNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number * 1000) / 1000 : value;
+}
+
+function safeFileName(value) {
+  return String(value).replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "-").toLowerCase();
 }
 
 function resetConfigurationForModel() {

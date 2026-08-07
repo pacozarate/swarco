@@ -1,6 +1,53 @@
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260806-v4-1-61";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-64";
 
 export function breakdownView(state, technology) {
+  const data = buildBreakdownData(state, technology);
+  const isLed = data.isLed;
+  return `
+    <div class="breakdown-actions">
+      <div class="breakdown-export-controls">
+        <label for="breakdownExportFormat">Exportar</label>
+        <select id="breakdownExportFormat" class="form-select">
+          <option value="pdf">PDF</option>
+          <option value="excel">Excel</option>
+        </select>
+        <button type="button" class="primary-button" id="exportBreakdown">Exportar</button>
+      </div>
+    </div>
+    <article class="breakdown-sheet breakdown-${isLed ? "led" : "tft"}">
+      <header class="breakdown-top">
+        <img src="brand-assets/swarco-logo-product-gray.png" alt="Swarco" />
+        <h2>DESGLOSE ${technology}</h2>
+        <div class="breakdown-model">
+          <span>FAMILIA</span><strong>${escapeHtml(data.family || "-")}</strong>
+          <span>MODELO</span><strong>${escapeHtml(data.model || "-")}</strong>
+        </div>
+      </header>
+
+      ${mainSummaryTable(data.moduleRows, data.totals, isLed)}
+
+      <div class="breakdown-layout">
+        <main class="breakdown-main">
+          ${simpleCostTable("EXCLUIDAS", data.excludedRows, ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
+          ${simpleCostTable("INCLUIDOS", data.includedRows, ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
+          ${simpleCostTable("AUXILIARES", data.auxRows, ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
+          ${glassTable(data.glassRows, isLed)}
+          ${mechanicalTable(data.mechanicalRows)}
+        </main>
+        <aside class="breakdown-side">
+          ${data.sideCards.map((card) => sideTable(card.title, card.rows)).join("")}
+        </aside>
+      </div>
+
+      <footer class="breakdown-footer">
+        <strong>Coste Total</strong>
+        <span>${formatCurrency(data.totalCost)}</span>
+      </footer>
+    </article>
+  `;
+}
+
+export function buildBreakdownData(state, technology) {
   const isLed = technology === "LED";
   const selectedModules = selectedModuleRows(state);
   const moduleRows = selectedModules.filter((row) => String(row.group) !== "6").map((row) => moduleSummaryRow(row, state, isLed));
@@ -12,38 +59,22 @@ export function breakdownView(state, technology) {
   const totals = moduleTotals(moduleRows, isLed);
   const totalCost = totals.total;
 
-  return `
-    <article class="breakdown-sheet breakdown-${isLed ? "led" : "tft"}">
-      <header class="breakdown-top">
-        <img src="brand-assets/swarco-logo-product-gray.png" alt="Swarco" />
-        <h2>DESGLOSE ${technology}</h2>
-        <div class="breakdown-model">
-          <span>FAMILIA</span><strong>${escapeHtml(state.currentModel?.description || "-")}</strong>
-          <span>PN533A</span><strong>${escapeHtml(state.selectedModel || "-")}</strong>
-        </div>
-      </header>
-
-      ${mainSummaryTable(moduleRows, totals, isLed)}
-
-      <div class="breakdown-layout">
-        <main class="breakdown-main">
-          ${simpleCostTable("EXCLUIDAS", excludedRows(state), ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
-          ${simpleCostTable("INCLUIDOS", includedRows(state), ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
-          ${simpleCostTable("AUXILIARES", auxRows, ["GRP", "CODIGO", "Descripción", "Cantidad", "PRECIO", "Total"])}
-          ${glassTable(glassRows, isLed)}
-          ${mechanicalTable(mechanicalRows)}
-        </main>
-        <aside class="breakdown-side">
-          ${isLed ? ledSideCards(state, totalCost) : tftSideCards(state, totalCost)}
-        </aside>
-      </div>
-
-      <footer class="breakdown-footer">
-        <strong>Coste Total</strong>
-        <span>${formatCurrency(totalCost)}</span>
-      </footer>
-    </article>
-  `;
+  return {
+    technology,
+    isLed,
+    family: state.currentModel?.description || "",
+    model: state.selectedModel || "",
+    selectedModules,
+    moduleRows,
+    auxRows,
+    glassRows,
+    mechanicalRows,
+    excludedRows: excludedRows(state),
+    includedRows: includedRows(state),
+    totals,
+    totalCost,
+    sideCards: isLed ? ledSideCardData(state, totalCost) : tftSideCardData(state, totalCost)
+  };
 }
 
 function mainSummaryTable(rows, totals, isLed) {
@@ -287,51 +318,51 @@ function mechanicalTable(rows) {
   `;
 }
 
-function ledSideCards(state, totalCost) {
+function ledSideCardData(state, totalCost) {
   const module = (state.tables.ct_led || []).find((row) => row.code === state.config.ledModuleCode) || {};
-  return `
-    ${sideTable("LEDS", [
+  return [
+    { title: "LEDS", rows: [
       ["Color LED", state.config.ledColor || module.color || "-"],
       ["Paso entre LEDs", `${module.pitchX || "-"} x ${module.pitchY || "-"} mm`],
       ["Resolucion", state.ledCalculation?.resolution || "-"],
       ["Nº modulos", state.ledCalculation?.moduleCount || 0],
       ["Nº fuentes", state.ledCalculation?.faCount || 0]
-    ])}
-    ${sideTable("MODULOS", [
+    ] },
+    { title: "MODULOS", rows: [
       ["Matriz", state.config.ledModuleCode || "-"],
       ["FA", module.faCode || "-"],
       ["Area visible", `${formatNumber(state.ledDimensions?.widthMm)} x ${formatNumber(state.ledDimensions?.heightMm)} mm`]
-    ])}
-    ${sideTable("CALCULO MECANICA", [
+    ] },
+    { title: "CALCULO MECANICA", rows: [
       ["Largo Mecanica", `${state.config.ledMechanicsMode === "Manual" ? state.config.ledManualWidthMm : state.ledDimensions?.widthMm || "-"} mm`],
       ["Alto Mecanica", `${state.config.ledMechanicsMode === "Manual" ? state.config.ledManualHeightMm : state.ledDimensions?.heightMm || "-"} mm`],
       ["Peso Mecanica", `${state.mechanics?.mechanicalWeightKg || 0} kg`],
       ["Coste Total", formatCurrency(totalCost)]
-    ])}
-  `;
+    ] }
+  ];
 }
 
-function tftSideCards(state, totalCost) {
-  return `
-    ${sideTable("CALCULO TFT", [
+function tftSideCardData(state, totalCost) {
+  return [
+    { title: "CALCULO TFT", rows: [
       ["Tamaño en Pulgadas", state.tftDetails?.inches || state.config.tftSizeInches || "-"],
       ["Aspect ratio", state.tftDetails?.format || state.config.tftAspectRatio || "-"],
       ["Luminosidad", state.tftDetails?.brightness || "-"],
       ["Resolucion", state.tftDetails?.resolution || "-"],
       ["Precio final", formatCurrency(currentTftPrice(state))]
-    ])}
-    ${sideTable("MEC. CALCULO AUTOMATICO", [
+    ] },
+    { title: "MEC. CALCULO AUTOMATICO", rows: [
       ["Largo Visible", `${state.tftDimensions?.visibleWidthMm || "-"} mm`],
       ["Alto Visible", `${state.tftDimensions?.visibleHeightMm || "-"} mm`],
       ["Largo Mecanica", `${state.tftDimensions?.mechanicalWidthMm || "-"} mm`],
       ["Alto Mecanica", `${state.tftDimensions?.mechanicalHeightMm || "-"} mm`]
-    ])}
-    ${sideTable("RESUMEN COSTE", [
+    ] },
+    { title: "RESUMEN COSTE", rows: [
       ["Material", state.config.tftMaterial || "-"],
       ["Peso Mecanica", `${state.mechanics?.mechanicalWeightKg || 0} kg`],
       ["Coste Total", formatCurrency(totalCost)]
-    ])}
-  `;
+    ] }
+  ];
 }
 
 function sideTable(title, rows) {

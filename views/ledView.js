@@ -1,7 +1,7 @@
-import { equipmentImages } from "../js/tftMechanicalData.js?v=20260807-v4-1-63";
-import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-63";
-import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-63";
-import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-63";
+import { equipmentImages } from "../js/tftMechanicalData.js?v=20260807-v4-1-64";
+import { explodeBom } from "../js/bomExplosionEngine.js?v=20260807-v4-1-64";
+import { productSheetView } from "./productSheetView.js?v=20260807-v4-1-64";
+import { breakdownView } from "./breakdownView.js?v=20260807-v4-1-64";
 
 const ledTabs = [
   { id: "mecanica", label: "Mecánica" },
